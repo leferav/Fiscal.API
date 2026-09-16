@@ -1,5 +1,6 @@
 ﻿using DFe.Classes.Entidades;
 using DFe.Classes.Flags;
+using Fiscal.API.Models.Database;
 using Fiscal.API.Models.NFe;
 using Fiscal.API.Services.NFe;
 using NFe.Classes.Informacoes.Identificacao;
@@ -34,7 +35,7 @@ namespace Fiscal.API.Services.NFCe
             _configuration = configuration;
         }
 
-        public global::NFe.Classes.NFe Criar(EmitirNFeRequest request)
+        public global::NFe.Classes.NFe Criar(EmitirNFeRequest request, Empresa empresa,ConfiguracaoFiscal configuracaoFiscal)
         {
             var nfce = new global::NFe.Classes.NFe
             {
@@ -44,9 +45,9 @@ namespace Fiscal.API.Services.NFCe
                 }
             };
 
-            MontarIdentificacao(nfce);
+            MontarIdentificacao(nfce, empresa, configuracaoFiscal);
 
-            nfce.infNFe.emit = _emitenteBuilder.Criar();
+            nfce.infNFe.emit = _emitenteBuilder.Criar(empresa);
 
             nfce.infNFe.det =
                 _produtoBuilder.Criar(request.Produtos);
@@ -66,28 +67,25 @@ namespace Fiscal.API.Services.NFCe
             return nfce;
         }
 
-        private void MontarIdentificacao(global::NFe.Classes.NFe nfce)
+        private void MontarIdentificacao(global::NFe.Classes.NFe nfce, Empresa empresa, ConfiguracaoFiscal configuracaoFiscal)
         {
-            var ufTexto = _configuration["Fiscal:Uf"] ?? "MG";
-
             var estado = Enum.Parse<Estado>(
-                ufTexto,
+                empresa.Uf,
                 ignoreCase: true);
 
+            // Por enquanto continuaremos buscando o município da configuração.
+            // Depois colocaremos endereço/município na tabela da empresa.
             var codigoMunicipio = int.Parse(
                 _configuration["Fiscal:Emitente:CodigoMunicipio"]!
             );
 
-            var ambienteTexto =
-                _configuration["Fiscal:Ambiente"];
-
             var ambiente =
-                ambienteTexto == "Producao"
+                configuracaoFiscal.Ambiente == 1
                     ? TipoAmbiente.Producao
                     : TipoAmbiente.Homologacao;
 
-            var numeroNFCe = 900001;
-            var serie = 1;
+            var numeroNFCe = configuracaoFiscal.ProximoNumeroNFCe;
+            var serie = configuracaoFiscal.SerieNFCe;
 
             nfce.infNFe.ide = new ide
             {

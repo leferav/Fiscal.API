@@ -1,8 +1,13 @@
+using Fiscal.API.Data;
 using Fiscal.API.Services;
 using Fiscal.API.Services.NFCe;
 using Fiscal.API.Services.NFe;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDbContext<FiscalDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("FiscalDb")));
 
 // Controllers
 builder.Services.AddControllers();

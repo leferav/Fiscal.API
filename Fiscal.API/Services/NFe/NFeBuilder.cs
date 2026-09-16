@@ -1,5 +1,6 @@
 ﻿using DFe.Classes.Entidades;
 using DFe.Classes.Flags;
+using Fiscal.API.Models.Database;
 using Fiscal.API.Models.NFe;
 using NFe.Classes.Informacoes.Identificacao;
 using NFe.Classes.Informacoes.Identificacao.Tipos;

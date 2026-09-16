@@ -1,7 +1,9 @@
 ﻿using DFe.Classes.Flags;
+using Fiscal.API.Data;
 using Fiscal.API.Models.NFe;
 using Fiscal.API.Services.NFCe;
 using Fiscal.API.Services.NFe;
+using Microsoft.EntityFrameworkCore;
 using NFe.Classes.Servicos.Tipos;
 using NFe.Servicos;
 using NFe.Utils;
@@ -17,19 +19,22 @@ namespace Fiscal.API.Services
         private readonly NFCeBuilder _nfceBuilder;
         private readonly NFeXmlService _nfeXmlService;
         private readonly IConfiguration _configuration;
+        private readonly FiscalDbContext _context;
 
         public FiscalService(
             ZeusConfigurationFactory configFactory,
             NFeBuilder nfeBuilder,
             NFeXmlService nfeXmlService,
             NFCeBuilder nfceBuilder,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            FiscalDbContext context )
         {
             _configFactory = configFactory;
             _nfeBuilder = nfeBuilder;
             _nfeXmlService = nfeXmlService;
             _nfceBuilder = nfceBuilder;
             _configuration = configuration; 
+            _context = context;
         }
 
         #region NF-e
@@ -152,9 +157,30 @@ namespace Fiscal.API.Services
 
         #region NFC-e
 
-        public object AutorizarNFCe(EmitirNFeRequest request)
+        public async Task<object> AutorizarNFCeAsync(
+            EmitirNFeRequest request)
         {
-            var nfce = _nfceBuilder.Criar(request);
+            var empresa = await _context.Empresas
+                .AsNoTracking()
+                .Include(x => x.ConfiguracaoFiscal)
+                .FirstOrDefaultAsync(x => x.Id == request.EmpresaId);
+
+            if (empresa is null)
+                throw new Exception("Empresa não encontrada.");
+
+            if (!empresa.Ativo)
+                throw new Exception("Empresa está inativa.");
+
+            if (empresa.ConfiguracaoFiscal is null)
+                throw new Exception(
+                    "Empresa não possui configuração fiscal.");
+
+            var configuracaoFiscal = empresa.ConfiguracaoFiscal;
+
+            var nfce = _nfceBuilder.Criar(
+                                            request,
+                                            empresa,
+                                            configuracaoFiscal);
 
             var configuracao = _configFactory.Criar();
 
@@ -164,8 +190,8 @@ namespace Fiscal.API.Services
             nfce.Assina(configuracao);
 
             // Depois gera informações suplementares da NFC-e
-            var idCsc = _configuration["Fiscal:Csc:Id"];
-            var csc = _configuration["Fiscal:Csc:Token"];
+            var idCsc = configuracaoFiscal.CscId;
+            var csc = configuracaoFiscal.Csc;
 
             nfce.infNFeSupl = new global::NFe.Classes.infNFeSupl();
             nfce.infNFeSupl.urlChave =
@@ -185,9 +211,27 @@ namespace Fiscal.API.Services
             // Valida o XML completo
             nfce.Valida(configuracao);
 
-            // ============================================
-            // DEBUG - XML da NFC-e antes de enviar à SEFAZ
-            // ============================================
+
+
+            Console.WriteLine("========== IDE ==========");
+
+            Console.WriteLine($"Modelo: {nfce.infNFe?.ide?.mod}");
+            Console.WriteLine($"Serie: {nfce.infNFe?.ide?.serie}");
+            Console.WriteLine($"Numero: {nfce.infNFe?.ide?.nNF}");
+            Console.WriteLine($"UF: {nfce.infNFe?.ide?.cUF}");
+            Console.WriteLine($"Ambiente: {nfce.infNFe?.ide?.tpAmb}");
+
+            Console.WriteLine("=========================");
+
+            Console.WriteLine("========== EMITENTE ==========");
+
+            Console.WriteLine($"CNPJ: {nfce.infNFe?.emit?.CNPJ}");
+            Console.WriteLine($"Razao Social: {nfce.infNFe?.emit?.xNome}");
+            Console.WriteLine($"IE: {nfce.infNFe?.emit?.IE}");
+
+            Console.WriteLine("==============================");
+
+
             var xmlNfce = nfce.ObterXmlString();
 
             Console.WriteLine("========== XML NFC-e ==========");

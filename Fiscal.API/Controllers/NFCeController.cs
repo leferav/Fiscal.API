@@ -16,12 +16,12 @@ namespace Fiscal.API.Controllers
         }
 
         [HttpPost("autorizar")]
-        public IActionResult Autorizar([FromBody] EmitirNFeRequest request)
+        public async Task<IActionResult> Autorizar([FromBody] EmitirNFeRequest request)
         {
             try
             {
                 var resultado =
-                    _fiscalService.AutorizarNFCe(request);
+                    await _fiscalService.AutorizarNFCeAsync(request);
 
                 return Ok(resultado);
             }
