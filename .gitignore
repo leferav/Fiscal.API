@@ -1,0 +1,28 @@
+﻿# Compilação .NET
+bin/
+obj/
+
+# Visual Studio
+.vs/
+bin/
+obj/
+
+# Certificados digitais - NUNCA enviar para o Git
+Certificados/
+*.pfx
+*.p12
+*.cer
+
+# Configurações locais
+appsettings.Development.json
+
+# Logs
+logs/
+*.log
+
+# Configurações locais
+appsettings.Development.json
+
+# Arquivos de usuário do Visual Studio
+*.user
+*.suo
