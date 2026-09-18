@@ -1,4 +1,5 @@
-﻿using Fiscal.API.Models.Database;
+﻿using Fiscal.API.Models;
+using Fiscal.API.Models.Database;
 using Microsoft.EntityFrameworkCore;
 
 namespace Fiscal.API.Data;
@@ -12,6 +13,7 @@ public class FiscalDbContext : DbContext
     public DbSet<NotaFiscal> NotasFiscais => Set<NotaFiscal>();
     public DbSet<ConfiguracaoTributaria> ConfiguracoesTributarias => Set<ConfiguracaoTributaria>();
     public DbSet<Produto> Produtos => Set<Produto>();
+    public DbSet<Usuario> Usuarios => Set<Usuario>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -22,6 +24,7 @@ public class FiscalDbContext : DbContext
         ConfigurarNotaFiscal(modelBuilder);
         ConfigurarConfiguracaoTributaria(modelBuilder);
         ConfigurarProduto(modelBuilder);
+        ConfigurarUsuario(modelBuilder);
     }
 
     private static void ConfigurarEmpresa(ModelBuilder modelBuilder)
@@ -202,6 +205,39 @@ public class FiscalDbContext : DbContext
         entity.HasOne(x => x.ConfiguracaoTributaria)
             .WithMany(x => x.Produtos)
             .HasForeignKey(x => x.ConfiguracaoTributariaId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigurarUsuario(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<Usuario>();
+
+        entity.ToTable("usuarios");
+
+        entity.HasKey(x => x.Id);
+
+        entity.Property(x => x.Nome)
+            .HasMaxLength(150)
+            .IsRequired();
+
+        entity.Property(x => x.Email)
+            .HasMaxLength(200)
+            .IsRequired();
+
+        entity.Property(x => x.SenhaHash)
+            .HasMaxLength(500)
+            .IsRequired();
+
+        entity.Property(x => x.Perfil)
+            .HasMaxLength(50)
+            .IsRequired();
+
+        entity.HasIndex(x => x.Email)
+            .IsUnique();
+
+        entity.HasOne(x => x.Empresa)
+            .WithMany(x => x.Usuarios)
+            .HasForeignKey(x => x.EmpresaId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

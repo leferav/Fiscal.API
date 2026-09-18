@@ -1,6 +1,7 @@
 ﻿using Fiscal.API.Data;
 using Fiscal.API.Models.Database;
 using Fiscal.API.Models.Requests.Cadastros;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,6 +16,42 @@ namespace Fiscal.API.Controllers.Cadastros
         public ProdutosController(FiscalDbContext context)
         {
             _context = context;
+        }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> ObterProdutos()
+        {
+            var empresaIdClaim = User.FindFirst("empresaId")?.Value;
+
+            if (string.IsNullOrWhiteSpace(empresaIdClaim) ||
+                !Guid.TryParse(empresaIdClaim, out var empresaId))
+            {
+                return Unauthorized(new
+                {
+                    mensagem = "Empresa não identificada no token."
+                });
+            }
+
+            var produtos = await _context.Produtos
+                .Where(x =>
+                    x.EmpresaId == empresaId &&
+                    x.Ativo)
+                .OrderBy(x => x.Descricao)
+                .Select(x => new
+                {
+                    x.Id,
+                    x.Codigo,
+                    x.Descricao,
+                    x.Ncm,
+                    x.Unidade,
+                    x.ValorVenda,
+                    x.ConfiguracaoTributariaId,
+                    x.Ativo
+                })
+                .ToListAsync();
+
+            return Ok(produtos);
         }
 
         [HttpGet("{id:guid}")]

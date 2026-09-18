@@ -31,13 +31,11 @@ public class Empresa
 
     public ConfiguracaoFiscal? ConfiguracaoFiscal { get; set; }
 
-    public ICollection<NotaFiscal> NotasFiscais { get; set; }
-        = new List<NotaFiscal>();
+    public ICollection<NotaFiscal> NotasFiscais { get; set; } = new List<NotaFiscal>();
 
-    public ICollection<ConfiguracaoTributaria> ConfiguracoesTributarias { get; set; }
-    = new List<ConfiguracaoTributaria>();
+    public ICollection<ConfiguracaoTributaria> ConfiguracoesTributarias { get; set; } = new List<ConfiguracaoTributaria>();
 
-    public ICollection<Produto> Produtos { get; set; }
-    = new List<Produto>();
+    public ICollection<Produto> Produtos { get; set; } = new List<Produto>();
 
+    public ICollection<Usuario> Usuarios { get; set; } = new List<Usuario>();
 }

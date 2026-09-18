@@ -1,0 +1,273 @@
+.login-page {
+  min-height: 100vh;
+
+  background:
+    linear-gradient(
+      135deg,
+      #075bab 0%,
+      #0878ca 52%,
+      var(--color-background) 52%,
+      var(--color-background) 100%
+    );
+}
+
+.login-card {
+  width: 100%;
+
+  padding: 42px 40px;
+
+  background: var(--color-surface);
+
+  border: 1px solid rgba(216, 229, 239, 0.9);
+  border-radius: 16px;
+
+  box-shadow:
+    0 22px 60px rgba(5, 52, 105, 0.2);
+}
+
+
+/* ============================================================
+   MARCA
+============================================================ */
+
+.login-brand {
+  margin-bottom: 34px;
+}
+
+.login-logo {
+  color: var(--color-primary);
+
+  font-size: 27px;
+  font-weight: 900;
+
+  letter-spacing: 0.8px;
+}
+
+.login-brand-line {
+  width: 62px;
+  height: 4px;
+
+  margin-top: 8px;
+
+  background: var(--color-danger);
+
+  border-radius: 10px;
+}
+
+
+/* ============================================================
+   TÍTULO
+============================================================ */
+
+.login-title {
+  margin: 0 0 7px;
+
+  color: var(--color-text-primary);
+
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.login-subtitle {
+  max-width: 320px;
+
+  margin: 0;
+
+  color: var(--color-text-muted);
+
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+
+/* ============================================================
+   FORMULÁRIO
+============================================================ */
+
+.login-label {
+  margin-bottom: 6px;
+
+  color: var(--color-text-secondary);
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.login-input-group {
+  border-radius: 9px;
+
+  box-shadow:
+    0 2px 5px rgba(17, 66, 110, 0.03);
+}
+
+.login-input-group .input-group-text {
+  min-width: 48px;
+
+  display: flex;
+  justify-content: center;
+
+  color: var(--color-primary);
+
+  background: #f5f9fd;
+
+  border-color: var(--color-border);
+}
+
+.login-input-group .form-control {
+  min-height: 50px;
+
+  color: var(--color-text-primary);
+
+  border-color: var(--color-border);
+
+  font-size: 14px;
+}
+
+.login-input-group .form-control::placeholder {
+  color: #a3b3c3;
+}
+
+.login-input-group .form-control:focus {
+  border-color: var(--color-primary);
+
+  box-shadow: none;
+}
+
+.login-input-group:focus-within {
+  box-shadow:
+    0 0 0 3px rgba(8, 106, 187, 0.1);
+}
+
+
+/* ============================================================
+   MOSTRAR SENHA
+============================================================ */
+
+.login-show-password {
+  width: 48px;
+
+  color: var(--color-text-muted);
+
+  background: #f5f9fd;
+
+  border-color: var(--color-border);
+}
+
+.login-show-password:hover {
+  color: var(--color-primary);
+
+  background: #edf5fb;
+
+  border-color: var(--color-border);
+}
+
+
+/* ============================================================
+   ERRO
+============================================================ */
+
+.login-alert {
+  margin-top: 18px;
+  margin-bottom: 0;
+
+  padding: 10px 12px;
+
+  font-size: 12px;
+
+  border-radius: 8px;
+}
+
+
+/* ============================================================
+   BOTÃO
+============================================================ */
+
+.login-button {
+  min-height: 52px;
+
+  color: #ffffff;
+
+  background: #198754;
+
+  border: 0;
+  border-radius: 9px;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  box-shadow:
+    0 7px 18px rgba(25, 135, 84, 0.22);
+
+  transition:
+    background 0.2s,
+    transform 0.15s,
+    box-shadow 0.2s;
+}
+
+.login-button:hover:not(:disabled) {
+  color: #ffffff;
+
+  background: #157347;
+
+  transform: translateY(-1px);
+
+  box-shadow:
+    0 9px 22px rgba(25, 135, 84, 0.28);
+}
+
+.login-button:active {
+  background: #146c43;
+  transform: translateY(0);
+}
+
+.login-button:active {
+  transform: translateY(0);
+}
+
+
+/* ============================================================
+   RODAPÉ
+============================================================ */
+
+.login-footer {
+  margin-top: 30px;
+
+  color: var(--color-text-muted);
+
+  font-size: 10px;
+  text-align: center;
+
+  letter-spacing: 0.2px;
+}
+
+
+/* ============================================================
+   RESPONSIVO
+============================================================ */
+
+@media (max-width: 576px) {
+
+  .login-page {
+    padding: 18px;
+
+    background:
+      linear-gradient(
+        180deg,
+        #075bab 0%,
+        #0878ca 32%,
+        var(--color-background) 32%
+      );
+  }
+
+  .login-card {
+    padding: 32px 25px;
+  }
+
+  .login-logo {
+    font-size: 24px;
+  }
+
+  .login-title {
+    font-size: 21px;
+  }
+}

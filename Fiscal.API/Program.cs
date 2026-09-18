@@ -2,12 +2,18 @@ using Fiscal.API.Data;
 using Fiscal.API.Services;
 using Fiscal.API.Services.NFCe;
 using Fiscal.API.Services.NFe;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Banco de dados
 builder.Services.AddDbContext<FiscalDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("FiscalDb")));
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("FiscalDb")
+    ));
 
 // Controllers
 builder.Services.AddControllers();
@@ -16,8 +22,58 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Serviços da aplicação
+// ============================================================
+// JWT / AUTENTICAÇÃO
+// ============================================================
+
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? throw new InvalidOperationException(
+        "Jwt:Key não configurada."
+    );
+
+var jwtIssuer = builder.Configuration["Jwt:Issuer"]
+    ?? throw new InvalidOperationException(
+        "Jwt:Issuer não configurado."
+    );
+
+var jwtAudience = builder.Configuration["Jwt:Audience"]
+    ?? throw new InvalidOperationException(
+        "Jwt:Audience não configurado."
+    );
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters =
+            new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+
+                ValidIssuer = jwtIssuer,
+                ValidAudience = jwtAudience,
+
+                IssuerSigningKey =
+                    new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(jwtKey)
+                    ),
+
+                ClockSkew = TimeSpan.Zero
+            };
+    });
+
+builder.Services.AddAuthorization();
+
+// ============================================================
+// SERVIÇOS DA APLICAÇÃO
+// ============================================================
+
 builder.Services.AddScoped<FiscalService>();
+builder.Services.AddAuthorization();
+builder.Services.AddScoped<AuthService>();
 
 builder.Services.AddScoped<ZeusConfigurationFactory>();
 builder.Services.AddScoped<NFeBuilder>();
@@ -32,8 +88,12 @@ builder.Services.AddScoped<PagamentoBuilder>();
 
 builder.Services.AddScoped<NFeXmlService>();
 
-//NFCe
+// NFC-e
 builder.Services.AddScoped<NFCeBuilder>();
+
+// ============================================================
+// CORS
+// ============================================================
 
 builder.Services.AddCors(options =>
 {
@@ -48,6 +108,9 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// ============================================================
+// PIPELINE
+// ============================================================
 
 app.UseCors("FrontEnd");
 
@@ -59,6 +122,15 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// JWT
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapControllers();
+
+await UsuarioSeed.CriarAdminInicialAsync(
+    app.Services,
+    app.Configuration
+);
 
 app.Run();
