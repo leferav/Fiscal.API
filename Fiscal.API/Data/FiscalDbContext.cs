@@ -10,6 +10,8 @@ public class FiscalDbContext : DbContext
     public DbSet<Empresa> Empresas => Set<Empresa>();
     public DbSet<ConfiguracaoFiscal> ConfiguracoesFiscais => Set<ConfiguracaoFiscal>();
     public DbSet<NotaFiscal> NotasFiscais => Set<NotaFiscal>();
+    public DbSet<ConfiguracaoTributaria> ConfiguracoesTributarias => Set<ConfiguracaoTributaria>();
+    public DbSet<Produto> Produtos => Set<Produto>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -18,6 +20,8 @@ public class FiscalDbContext : DbContext
         ConfigurarEmpresa(modelBuilder);
         ConfigurarConfiguracaoFiscal(modelBuilder);
         ConfigurarNotaFiscal(modelBuilder);
+        ConfigurarConfiguracaoTributaria(modelBuilder);
+        ConfigurarProduto(modelBuilder);
     }
 
     private static void ConfigurarEmpresa(ModelBuilder modelBuilder)
@@ -115,5 +119,89 @@ public class FiscalDbContext : DbContext
         entity.HasOne(x => x.Empresa)
             .WithMany(x => x.NotasFiscais)
             .HasForeignKey(x => x.EmpresaId);
+    }
+
+    private static void ConfigurarConfiguracaoTributaria(ModelBuilder modelBuilder)
+    {
+        var entity =
+            modelBuilder.Entity<ConfiguracaoTributaria>();
+
+        entity.ToTable("configuracoes_tributarias");
+
+        entity.HasKey(x => x.Id);
+
+        entity.Property(x => x.Nome)
+            .HasMaxLength(100)
+            .IsRequired();
+
+        entity.Property(x => x.CstIcms)
+            .HasMaxLength(3);
+
+        entity.Property(x => x.Csosn)
+            .HasMaxLength(4);
+
+        entity.Property(x => x.AliquotaIcms)
+            .HasPrecision(7, 4);
+
+        entity.Property(x => x.Cfop)
+            .HasMaxLength(4)
+            .IsRequired();
+
+        entity.HasIndex(x => x.EmpresaId);
+
+        entity.HasOne(x => x.Empresa)
+            .WithMany(x => x.ConfiguracoesTributarias)
+            .HasForeignKey(x => x.EmpresaId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+
+    private static void ConfigurarProduto(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<Produto>();
+
+        entity.ToTable("produtos");
+
+        entity.HasKey(x => x.Id);
+
+        entity.Property(x => x.Codigo)
+            .HasMaxLength(50)
+            .IsRequired();
+
+        entity.Property(x => x.Descricao)
+            .HasMaxLength(200)
+            .IsRequired();
+
+        entity.Property(x => x.Ncm)
+            .HasMaxLength(8)
+            .IsRequired();
+
+        entity.Property(x => x.Unidade)
+            .HasMaxLength(10)
+            .IsRequired();
+
+        // Um código de produto não pode se repetir
+        // dentro da mesma empresa.
+        entity.HasIndex(x => new
+        {
+            x.EmpresaId,
+            x.Codigo
+        })
+        .IsUnique();
+
+        entity.HasIndex(x => x.ConfiguracaoTributariaId);
+
+        entity.HasOne(x => x.Empresa)
+            .WithMany(x => x.Produtos)
+            .HasForeignKey(x => x.EmpresaId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        entity.Property(x => x.ValorVenda)
+            .HasPrecision(18, 2)
+            .IsRequired();
+
+        entity.HasOne(x => x.ConfiguracaoTributaria)
+            .WithMany(x => x.Produtos)
+            .HasForeignKey(x => x.ConfiguracaoTributariaId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

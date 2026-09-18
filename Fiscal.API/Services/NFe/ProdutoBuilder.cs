@@ -1,4 +1,5 @@
-﻿using Fiscal.API.Models.NFe;
+﻿using Fiscal.API.Models.Database;
+using Fiscal.API.Models.NFe;
 using NFe.Classes.Informacoes.Detalhe;
 using NFe.Classes.Informacoes.Detalhe.Tributacao;
 using NFe.Classes.Informacoes.Detalhe.Tributacao.Compartilhado;
@@ -7,23 +8,25 @@ using NFe.Classes.Informacoes.Detalhe.Tributacao.Compartilhado.InformacoesIbsCbs
 using NFe.Classes.Informacoes.Detalhe.Tributacao.Compartilhado.Tipos;
 using NFe.Classes.Informacoes.Detalhe.Tributacao.Estadual;
 using NFe.Classes.Informacoes.Detalhe.Tributacao.Estadual.Tipos;
-using NFe.Classes.Informacoes.Detalhe.Tributacao.Federal;
-using NFe.Classes.Informacoes.Detalhe.Tributacao.Federal.Tipos;
 
 namespace Fiscal.API.Services.NFe
 {
     public class ProdutoBuilder
     {
-        private readonly IConfiguration _configuration;
-
-        public ProdutoBuilder(IConfiguration configuration)
-        {
-            _configuration = configuration;
-        }
-
+        // Mantido apenas para o NFeBuilder antigo continuar compilando.
+        // A NF-e será refatorada posteriormente para o novo modelo de produtos.
         public List<det> Criar(List<ProdutoRequest> produtos)
         {
-            if (produtos == null || produtos.Count == 0)
+            throw new NotSupportedException(
+                "A emissão de NF-e ainda não foi migrada para o novo cadastro de produtos.");
+        }
+
+        public List<det> CriarNFCe(
+            List<ItemFiscal> itensFiscais,
+            Empresa empresa,
+            ConfiguracaoFiscal configuracaoFiscal)
+        {
+            if (itensFiscais == null || itensFiscais.Count == 0)
             {
                 throw new Exception(
                     "Informe pelo menos um produto."
@@ -34,33 +37,48 @@ namespace Fiscal.API.Services.NFe
 
             var numeroItem = 1;
 
-            var crt = int.Parse(
-                _configuration["Fiscal:Emitente:Crt"] ?? "1"
-            );
+            var ambienteHomologacao =
+                configuracaoFiscal.Ambiente == 2;
 
-            var ambiente =
-                _configuration["Fiscal:Ambiente"];
-
-            foreach (var item in produtos)
+            foreach (var item in itensFiscais)
             {
+                var configuracaoTributaria =
+                    item.ConfiguracaoTributaria;
+
+                // ====================================================
+                // Valores
+                // ====================================================
+
                 var valorProduto =
                     item.Quantidade * item.ValorUnitario;
 
                 var descricao = item.Descricao;
 
-                // Obrigatório para o primeiro item em homologação
-                if (
-                    string.Equals(
-                        ambiente,
-                        "Homologacao",
-                        StringComparison.OrdinalIgnoreCase
-                    )
-                    && numeroItem == 1
-                )
+                // ====================================================
+                // Homologação
+                // ====================================================
+
+                if (ambienteHomologacao && numeroItem == 1)
                 {
                     descricao =
                         "NOTA FISCAL EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL";
                 }
+
+                // ====================================================
+                // Valida CFOP
+                // ====================================================
+
+                if (string.IsNullOrWhiteSpace(
+                    configuracaoTributaria.Cfop))
+                {
+                    throw new Exception(
+                        $"CFOP não informado para o produto {item.Codigo}."
+                    );
+                }
+
+                // ====================================================
+                // Monta item
+                // ====================================================
 
                 itens.Add(new det
                 {
@@ -77,7 +95,9 @@ namespace Fiscal.API.Services.NFe
 
                         NCM = item.Ncm,
 
-                        CFOP = int.Parse(item.Cfop),
+                        CFOP = int.Parse(
+                            configuracaoTributaria.Cfop
+                        ),
 
                         uCom = item.Unidade,
                         qCom = item.Quantidade,
@@ -96,9 +116,14 @@ namespace Fiscal.API.Services.NFe
 
                     imposto = new imposto
                     {
+                        // =============================================
+                        // IBS / CBS
+                        // =============================================
+
                         IBSCBS = new IBSCBS
                         {
                             CST = CST.Cst000,
+
                             cClassTrib = "000001",
 
                             gIBSCBS = new gIBSCBS
@@ -119,17 +144,26 @@ namespace Fiscal.API.Services.NFe
 
                                 vIBS = 0,
 
-                                gCBS = new global::NFe.Classes.Informacoes.Detalhe.Tributacao.Compartilhado.InformacoesIbsCbs.InformacoesCbs.gCBS
-                                {
-                                    pCBS = 0.9m,
-                                    vCBS = 0
-                                }
+                                gCBS =
+                                    new global::NFe.Classes.Informacoes.Detalhe
+                                        .Tributacao.Compartilhado
+                                        .InformacoesIbsCbs
+                                        .InformacoesCbs.gCBS
+                                    {
+                                        pCBS = 0.9m,
+                                        vCBS = 0
+                                    }
                             }
                         },
 
+                        // =============================================
+                        // ICMS
+                        // =============================================
+
                         ICMS = CriarIcms(
-                            crt,
-                            valorProduto
+                            empresa.Crt,
+                            valorProduto,
+                            configuracaoTributaria
                         )
                     }
                 });
@@ -138,94 +172,34 @@ namespace Fiscal.API.Services.NFe
             return itens;
         }
 
+        // ============================================================
+        // ICMS
+        // ============================================================
         private ICMS CriarIcms(
             int crt,
-            decimal valorProduto)
+            decimal valorProduto,
+            ConfiguracaoTributaria configuracaoTributaria)
         {
-            // Simples Nacional ou MEI
+            // ========================================================
+            // Simples Nacional / MEI
+            // ========================================================
+
             if (crt == 1 || crt == 4)
             {
-                return new ICMS
-                {
-                    TipoICMS = new ICMSSN102
-                    {
-                        CSOSN =
-                            Csosnicms.Csosn102,
-
-                        orig =
-                            OrigemMercadoria
-                                .OmNacional
-                    }
-                };
+                return CriarIcmsSimplesNacional(
+                    configuracaoTributaria
+                );
             }
 
+            // ========================================================
             // Regime Normal
+            // ========================================================
+
             if (crt == 3)
             {
-                var cst =
-                    _configuration[
-                        "Fiscal:Tributacao:CstIcms"
-                    ];
-
-                var aliquotaTexto =
-                    _configuration[
-                        "Fiscal:Tributacao:AliquotaIcms"
-                    ];
-
-                if (string.IsNullOrWhiteSpace(cst))
-                {
-                    throw new Exception(
-                        "CRT 3: informe Fiscal:Tributacao:CstIcms."
-                    );
-                }
-
-                if (string.IsNullOrWhiteSpace(aliquotaTexto))
-                {
-                    throw new Exception(
-                        "CRT 3: informe Fiscal:Tributacao:AliquotaIcms."
-                    );
-                }
-
-                var aliquota = decimal.Parse(
-                    aliquotaTexto,
-                    System.Globalization
-                        .CultureInfo.InvariantCulture
-                );
-
-                if (cst == "00")
-                {
-                    var valorIcms =
-                        Math.Round(
-                            valorProduto
-                            * aliquota
-                            / 100m,
-                            2
-                        );
-
-                    return new ICMS
-                    {
-                        TipoICMS = new ICMS00
-                        {
-                            orig =
-                                OrigemMercadoria
-                                    .OmNacional,
-
-                            CST =
-                                Csticms.Cst00,
-
-                            modBC = DeterminacaoBaseIcms.DbiValorOperacao,
-
-                            vBC = valorProduto,
-
-                            pICMS = aliquota,
-
-                            vICMS = valorIcms
-                        }
-                    };
-                }
-
-                throw new Exception(
-                    $"CST ICMS {cst} ainda não implementado."
+                return CriarIcmsRegimeNormal(
+                    valorProduto,
+                    configuracaoTributaria
                 );
             }
 
@@ -233,5 +207,67 @@ namespace Fiscal.API.Services.NFe
                 $"CRT {crt} ainda não suportado."
             );
         }
+
+        // ============================================================
+        // Simples Nacional / MEI
+        // ============================================================
+        private ICMS CriarIcmsSimplesNacional(
+            ConfiguracaoTributaria configuracaoTributaria)
+        {
+            var csosn = configuracaoTributaria.Csosn ?? "102";
+
+            if (csosn == "102")
+            {
+                return new ICMS
+                {
+                    TipoICMS = new ICMSSN102
+                    {
+                        CSOSN = Csosnicms.Csosn102,
+                        orig = OrigemMercadoria.OmNacional
+                    }
+                };
+            }
+
+            throw new Exception(
+                $"CSOSN {csosn} ainda não implementado.");
+        }
+
+        private ICMS CriarIcmsRegimeNormal(
+            decimal valorProduto,
+            ConfiguracaoTributaria configuracaoTributaria)
+        {
+            var cst = configuracaoTributaria.CstIcms;
+            var aliquota = configuracaoTributaria.AliquotaIcms;
+
+            if (string.IsNullOrWhiteSpace(cst))
+            {
+                throw new Exception(
+                    "CRT 3: CST ICMS não informado.");
+            }
+
+            if (cst == "00")
+            {
+                var valorIcms = Math.Round(
+                    valorProduto * aliquota / 100m,
+                    2);
+
+                return new ICMS
+                {
+                    TipoICMS = new ICMS00
+                    {
+                        orig = OrigemMercadoria.OmNacional,
+                        CST = Csticms.Cst00,
+                        modBC = DeterminacaoBaseIcms.DbiValorOperacao,
+                        vBC = valorProduto,
+                        pICMS = aliquota,
+                        vICMS = valorIcms
+                    }
+                };
+            }
+
+            throw new Exception(
+                $"CST ICMS {cst} ainda não implementado.");
+        }
+
     }
 }

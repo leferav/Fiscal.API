@@ -33,4 +33,11 @@ public class Empresa
 
     public ICollection<NotaFiscal> NotasFiscais { get; set; }
         = new List<NotaFiscal>();
+
+    public ICollection<ConfiguracaoTributaria> ConfiguracoesTributarias { get; set; }
+    = new List<ConfiguracaoTributaria>();
+
+    public ICollection<Produto> Produtos { get; set; }
+    = new List<Produto>();
+
 }

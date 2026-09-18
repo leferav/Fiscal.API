@@ -47,7 +47,7 @@ namespace Fiscal.API.Controllers
             }
 
             var valorTotal = request.Produtos.Sum(p =>
-                p.Quantidade * p.ValorUnitario);
+                p.Quantidade * 10);
 
             return Ok(new
             {

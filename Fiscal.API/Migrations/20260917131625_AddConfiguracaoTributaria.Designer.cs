@@ -3,6 +3,7 @@ using System;
 using Fiscal.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Fiscal.API.Migrations
 {
     [DbContext(typeof(FiscalDbContext))]
-    partial class FiscalDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260917131625_AddConfiguracaoTributaria")]
+    partial class AddConfiguracaoTributaria
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -263,61 +266,6 @@ namespace Fiscal.API.Migrations
                     b.ToTable("notas_fiscais", (string)null);
                 });
 
-            modelBuilder.Entity("Fiscal.API.Models.Database.Produto", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("Ativo")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("AtualizadoEm")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Codigo")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<Guid>("ConfiguracaoTributariaId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CriadoEm")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Descricao")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<Guid>("EmpresaId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Ncm")
-                        .IsRequired()
-                        .HasMaxLength(8)
-                        .HasColumnType("character varying(8)");
-
-                    b.Property<string>("Unidade")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
-
-                    b.Property<decimal>("ValorVenda")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ConfiguracaoTributariaId");
-
-                    b.HasIndex("EmpresaId", "Codigo")
-                        .IsUnique();
-
-                    b.ToTable("produtos", (string)null);
-                });
-
             modelBuilder.Entity("Fiscal.API.Models.Database.ConfiguracaoFiscal", b =>
                 {
                     b.HasOne("Fiscal.API.Models.Database.Empresa", "Empresa")
@@ -351,30 +299,6 @@ namespace Fiscal.API.Migrations
                     b.Navigation("Empresa");
                 });
 
-            modelBuilder.Entity("Fiscal.API.Models.Database.Produto", b =>
-                {
-                    b.HasOne("Fiscal.API.Models.Database.ConfiguracaoTributaria", "ConfiguracaoTributaria")
-                        .WithMany("Produtos")
-                        .HasForeignKey("ConfiguracaoTributariaId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Fiscal.API.Models.Database.Empresa", "Empresa")
-                        .WithMany("Produtos")
-                        .HasForeignKey("EmpresaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ConfiguracaoTributaria");
-
-                    b.Navigation("Empresa");
-                });
-
-            modelBuilder.Entity("Fiscal.API.Models.Database.ConfiguracaoTributaria", b =>
-                {
-                    b.Navigation("Produtos");
-                });
-
             modelBuilder.Entity("Fiscal.API.Models.Database.Empresa", b =>
                 {
                     b.Navigation("ConfiguracaoFiscal");
@@ -382,8 +306,6 @@ namespace Fiscal.API.Migrations
                     b.Navigation("ConfiguracoesTributarias");
 
                     b.Navigation("NotasFiscais");
-
-                    b.Navigation("Produtos");
                 });
 #pragma warning restore 612, 618
         }

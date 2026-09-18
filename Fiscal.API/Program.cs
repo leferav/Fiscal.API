@@ -35,7 +35,21 @@ builder.Services.AddScoped<NFeXmlService>();
 //NFCe
 builder.Services.AddScoped<NFCeBuilder>();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontEnd", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
+
+
+app.UseCors("FrontEnd");
 
 if (app.Environment.IsDevelopment())
 {

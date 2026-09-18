@@ -5,8 +5,6 @@ using Fiscal.API.Models.NFe;
 using Fiscal.API.Services.NFe;
 using NFe.Classes.Informacoes.Identificacao;
 using NFe.Classes.Informacoes.Identificacao.Tipos;
-using NFe.Utils;
-using NFe.Utils.InformacoesSuplementares;
 
 namespace Fiscal.API.Services.NFCe
 {
@@ -17,25 +15,28 @@ namespace Fiscal.API.Services.NFCe
         private readonly TotalBuilder _totalBuilder;
         private readonly TransporteBuilder _transporteBuilder;
         private readonly PagamentoBuilder _pagamentoBuilder;
-        private readonly IConfiguration _configuration;
 
         public NFCeBuilder(
             EmitenteBuilder emitenteBuilder,
             ProdutoBuilder produtoBuilder,
             TotalBuilder totalBuilder,
             TransporteBuilder transporteBuilder,
-            PagamentoBuilder pagamentoBuilder,
-            IConfiguration configuration)
+            PagamentoBuilder pagamentoBuilder)
         {
             _emitenteBuilder = emitenteBuilder;
             _produtoBuilder = produtoBuilder;
             _totalBuilder = totalBuilder;
             _transporteBuilder = transporteBuilder;
             _pagamentoBuilder = pagamentoBuilder;
-            _configuration = configuration;
         }
 
-        public global::NFe.Classes.NFe Criar(EmitirNFeRequest request, Empresa empresa,ConfiguracaoFiscal configuracaoFiscal)
+        // ============================================================
+        // Cria a NFC-e completa
+        // ============================================================
+        public global::NFe.Classes.NFe Criar(
+            List<ItemFiscal> itensFiscais,
+            Empresa empresa,
+            ConfiguracaoFiscal configuracaoFiscal)
         {
             var nfce = new global::NFe.Classes.NFe
             {
@@ -45,85 +46,150 @@ namespace Fiscal.API.Services.NFCe
                 }
             };
 
-            MontarIdentificacao(nfce, empresa, configuracaoFiscal);
+            // Identificação
+            MontarIdentificacao(
+                nfce,
+                empresa,
+                configuracaoFiscal
+            );
 
-            nfce.infNFe.emit = _emitenteBuilder.Criar(empresa);
+            // Emitente
+            nfce.infNFe.emit =
+                _emitenteBuilder.Criar(empresa);
 
+            // Produtos
             nfce.infNFe.det =
-                _produtoBuilder.Criar(request.Produtos);
+                _produtoBuilder.CriarNFCe(
+                    itensFiscais,
+                    empresa,
+                    configuracaoFiscal
+                );
 
+            // Totais
             nfce.infNFe.total =
-                _totalBuilder.Criar(nfce.infNFe.det);
+                _totalBuilder.Criar(
+                    nfce.infNFe.det
+                );
 
+            // Transporte
             nfce.infNFe.transp =
                 _transporteBuilder.Criar();
 
+            // Pagamento
             nfce.infNFe.pag =
                 _pagamentoBuilder.Criar(
                     nfce.infNFe.total.ICMSTot.vNF
                 );
 
-
             return nfce;
         }
 
-        private void MontarIdentificacao(global::NFe.Classes.NFe nfce, Empresa empresa, ConfiguracaoFiscal configuracaoFiscal)
+        // ============================================================
+        // Identificação da NFC-e
+        // ============================================================
+        private void MontarIdentificacao(
+            global::NFe.Classes.NFe nfce,
+            Empresa empresa,
+            ConfiguracaoFiscal configuracaoFiscal)
         {
-            var estado = Enum.Parse<Estado>(
-                empresa.Uf,
-                ignoreCase: true);
+            // ========================================================
+            // UF da empresa
+            // ========================================================
 
-            // Por enquanto continuaremos buscando o município da configuração.
-            // Depois colocaremos endereço/município na tabela da empresa.
-            var codigoMunicipio = int.Parse(
-                _configuration["Fiscal:Emitente:CodigoMunicipio"]!
-            );
+            var estado =
+                Enum.Parse<Estado>(
+                    empresa.Uf,
+                    ignoreCase: true
+                );
+
+            // ========================================================
+            // Ambiente
+            //
+            // 1 = Produção
+            // 2 = Homologação
+            // ========================================================
 
             var ambiente =
                 configuracaoFiscal.Ambiente == 1
                     ? TipoAmbiente.Producao
                     : TipoAmbiente.Homologacao;
 
-            var numeroNFCe = configuracaoFiscal.ProximoNumeroNFCe;
-            var serie = configuracaoFiscal.SerieNFCe;
+            // ========================================================
+            // Numeração fiscal
+            // ========================================================
+
+            var numeroNFCe =
+                configuracaoFiscal.ProximoNumeroNFCe;
+
+            var serie =
+                configuracaoFiscal.SerieNFCe;
+
+            // ========================================================
+            // IDE
+            // ========================================================
 
             nfce.infNFe.ide = new ide
             {
+                // UF
                 cUF = estado,
 
+                // Código numérico da chave
                 cNF = Random.Shared
                     .Next(10000000, 99999999)
                     .ToString(),
 
+                // Natureza da operação
                 natOp = "VENDA",
 
+                // Modelo 65 - NFC-e
                 mod = ModeloDocumento.NFCe,
 
+                // Série
                 serie = serie,
+
+                // Número vindo do banco
                 nNF = numeroNFCe,
 
+                // Data/hora
                 dhEmi = DateTimeOffset.Now,
 
+                // Saída
                 tpNF = TipoNFe.tnSaida,
 
+                // Operação interna
                 idDest = DestinoOperacao.doInterna,
 
-                cMunFG = codigoMunicipio,
+                // Município do fato gerador
+                cMunFG = empresa.CodigoMunicipio,
 
+                // DANFE NFC-e
                 tpImp = TipoImpressao.tiNFCe,
 
+                // Emissão normal
                 tpEmis = TipoEmissao.teNormal,
 
+                // Ambiente
                 tpAmb = ambiente,
 
+                // Finalidade normal
                 finNFe = FinalidadeNFe.fnNormal,
 
-                indFinal = ConsumidorFinal.cfConsumidorFinal,
+                // Consumidor final
+                indFinal =
+                    ConsumidorFinal
+                        .cfConsumidorFinal,
 
-                indPres = PresencaComprador.pcPresencial,
+                // Operação presencial
+                indPres =
+                    PresencaComprador
+                        .pcPresencial,
 
-                procEmi = ProcessoEmissao.peAplicativoContribuinte,
+                // Aplicativo do contribuinte
+                procEmi =
+                    ProcessoEmissao
+                        .peAplicativoContribuinte,
 
+                // Versão do sistema
                 verProc = "Fiscal.API 1.0"
             };
         }

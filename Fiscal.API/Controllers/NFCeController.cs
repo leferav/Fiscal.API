@@ -30,7 +30,8 @@ namespace Fiscal.API.Controllers
                 return BadRequest(new
                 {
                     erro = ex.Message,
-                    detalhe = ex.InnerException?.Message
+                    detalhe = ex.InnerException?.Message,
+                    stackTrace = ex.StackTrace
                 });
             }
         }
