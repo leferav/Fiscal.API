@@ -272,7 +272,8 @@ namespace Fiscal.API.Services
                 _nfceBuilder.Criar(
                     itensFiscais,
                     empresa,
-                    configuracaoFiscal
+                    configuracaoFiscal,
+                    request.Destinatario
                 );
 
 

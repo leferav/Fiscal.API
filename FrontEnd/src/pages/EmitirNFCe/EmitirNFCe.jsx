@@ -1,619 +1,400 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   obterProdutosPorEmpresa,
   autorizarNFCe,
 } from "../../services/fiscalApi";
-
 import {
   obterEmpresa,
+  obterEmpresaId,
   obterUsuario,
 } from "../../services/authService";
-
 import "./EmitirNFCe.css";
 
-
-const EMPRESA_ID =
-  "c5efdb35-f024-476c-9637-80820d00aa88";
-
-
 export default function EmitirNFCe({ onLogout }) {
-
   /* ============================================================
      ESTADOS
   ============================================================ */
-
   const [busca, setBusca] = useState("");
-
   const [itens, setItens] = useState([]);
-
-  const [
-    produtosDisponiveis,
-    setProdutosDisponiveis,
-  ] = useState([]);
-
-  const [
-    carregandoProdutos,
-    setCarregandoProdutos,
-  ] = useState(true);
-
-  const [
-    erroProdutos,
-    setErroProdutos,
-  ] = useState("");
-
-  const [
-    emitindo,
-    setEmitindo,
-  ] = useState(false);
-
-  const [
-    resultadoEmissao,
-    setResultadoEmissao,
-  ] = useState(null);
-
-  const [
-    erroEmissao,
-    setErroEmissao,
-  ] = useState("");
-
-  const [
-    menuUsuarioAberto,
-    setMenuUsuarioAberto,
-  ] = useState(false);
-
-
-  /* ============================================================
-     REFERÊNCIAS
-  ============================================================ */
+  const [cpfConsumidor, setCpfConsumidor] = useState("");
+  const [produtosDisponiveis, setProdutosDisponiveis] = useState([]);
+  const [carregandoProdutos, setCarregandoProdutos] = useState(true);
+  const [erroProdutos, setErroProdutos] = useState("");
+  const [emitindo, setEmitindo] = useState(false);
+  const [resultadoEmissao, setResultadoEmissao] = useState(null);
+  const [erroEmissao, setErroEmissao] = useState("");
+  const [menuUsuarioAberto, setMenuUsuarioAberto] = useState(false);
 
   const inputBuscaRef = useRef(null);
-
 
   /* ============================================================
      SESSÃO
   ============================================================ */
-
   const usuario = obterUsuario();
-
   const empresa = obterEmpresa();
-
+  const empresaId = obterEmpresaId();
 
   /* ============================================================
      CARREGAR PRODUTOS
   ============================================================ */
-
   useEffect(() => {
-
     async function carregarProdutos() {
-
       try {
-
         setCarregandoProdutos(true);
-
         setErroProdutos("");
 
-        const produtos =
-          await obterProdutosPorEmpresa(
-            EMPRESA_ID
-          );
+        if (!empresaId) {
+          throw new Error("Empresa da sessão não encontrada.");
+        }
+
+        const produtos = await obterProdutosPorEmpresa(empresaId);
 
         setProdutosDisponiveis(
           produtos
-            .filter(
-              (produto) =>
-                produto.ativo
-            )
-            .map(
-              (produto) => ({
-                id: produto.id,
-                codigo: produto.codigo,
-                descricao: produto.descricao,
-                valorVenda: Number(
-                  produto.valorVenda
-                ),
-              })
-            )
+            .filter((produto) => produto.ativo)
+            .map((produto) => ({
+              id: produto.id,
+              codigo: produto.codigo,
+              descricao: produto.descricao,
+              valorVenda: Number(produto.valorVenda),
+            }))
         );
-
       } catch (error) {
+          console.error("Erro ao carregar produtos:", error);
 
-        console.error(
-          "Erro ao carregar produtos:",
-          error
-        );
-
-        setErroProdutos(
-          "Não foi possível carregar os produtos."
-        );
-
+          setErroProdutos(
+            error.message ||
+            "Não foi possível carregar os produtos."
+          );
       } finally {
-
         setCarregandoProdutos(false);
-
       }
-
     }
 
     carregarProdutos();
-
-  }, []);
-
+  }, [empresaId]);
 
   /* ============================================================
      FILTRAR PRODUTOS
   ============================================================ */
+  const produtosFiltrados = useMemo(() => {
+    const texto = busca.trim().toLowerCase();
 
-  const produtosFiltrados =
-    useMemo(() => {
+    if (!texto) {
+      return [];
+    }
 
-      const texto =
-        busca
-          .trim()
-          .toLowerCase();
-
-      if (!texto) {
-        return [];
-      }
-
-      return produtosDisponiveis.filter(
-        (produto) =>
-          produto.codigo
-            .toLowerCase()
-            .includes(texto) ||
-
-          produto.descricao
-            .toLowerCase()
-            .includes(texto)
-      );
-
-    }, [
-      busca,
-      produtosDisponiveis,
-    ]);
-
+    return produtosDisponiveis.filter(
+      (produto) =>
+        produto.codigo.toLowerCase().includes(texto) ||
+        produto.descricao.toLowerCase().includes(texto)
+    );
+  }, [busca, produtosDisponiveis]);
 
   /* ============================================================
      ADICIONAR PRODUTO
   ============================================================ */
-
   function adicionarProduto(produto) {
-
     setItens((atual) => {
-
-      const existente =
-        atual.find(
-          (item) =>
-            item.id === produto.id
-        );
+      const existente = atual.find((item) => item.id === produto.id);
 
       if (existente) {
-
-        return atual.map(
-          (item) =>
-            item.id === produto.id
-              ? {
-                  ...item,
-                  quantidade:
-                    item.quantidade + 1,
-                }
-              : item
+        return atual.map((item) =>
+          item.id === produto.id
+            ? { ...item, quantidade: item.quantidade + 1 }
+            : item
         );
-
       }
 
-      return [
-        ...atual,
-        {
-          ...produto,
-          quantidade: 1,
-        },
-      ];
-
+      return [...atual, { ...produto, quantidade: 1 }];
     });
 
     setBusca("");
-
-    setTimeout(() => {
-
-      inputBuscaRef.current?.focus();
-
-    }, 0);
-
+    setTimeout(() => inputBuscaRef.current?.focus(), 0);
   }
-
 
   /* ============================================================
      ENTER NA PESQUISA
   ============================================================ */
-
   function tratarEnterPesquisa(event) {
-
     if (event.key !== "Enter") {
       return;
     }
 
     event.preventDefault();
 
-    const texto =
-      busca
-        .trim()
-        .toLowerCase();
+    const texto = busca.trim().toLowerCase();
 
     if (!texto) {
       return;
     }
 
-    const produtoCodigoExato =
-      produtosDisponiveis.find(
-        (produto) =>
-          produto.codigo
-            .toLowerCase() === texto
-      );
+    const produtoCodigoExato = produtosDisponiveis.find(
+      (produto) => produto.codigo.toLowerCase() === texto
+    );
 
     if (produtoCodigoExato) {
-
-      adicionarProduto(
-        produtoCodigoExato
-      );
-
+      adicionarProduto(produtoCodigoExato);
       return;
-
     }
 
-    if (
-      produtosFiltrados.length === 1
-    ) {
-
-      adicionarProduto(
-        produtosFiltrados[0]
-      );
-
+    if (produtosFiltrados.length === 1) {
+      adicionarProduto(produtosFiltrados[0]);
     }
-
   }
-
 
   /* ============================================================
      QUANTIDADE
   ============================================================ */
-
   function aumentarQuantidade(id) {
-
     setItens((atual) =>
-      atual.map(
-        (item) =>
-          item.id === id
-            ? {
-                ...item,
-                quantidade:
-                  item.quantidade + 1,
-              }
-            : item
+      atual.map((item) =>
+        item.id === id
+          ? { ...item, quantidade: item.quantidade + 1 }
+          : item
       )
     );
-
   }
-
 
   function diminuirQuantidade(id) {
-
     setItens((atual) =>
-      atual.map(
-        (item) =>
-          item.id === id
-            ? {
-                ...item,
-                quantidade:
-                  Math.max(
-                    1,
-                    item.quantidade - 1
-                  ),
-              }
-            : item
+      atual.map((item) =>
+        item.id === id
+          ? { ...item, quantidade: Math.max(1, item.quantidade - 1) }
+          : item
       )
     );
-
   }
 
+  function alterarQuantidade(id, quantidade) {
+    const novaQuantidade = Number(quantidade);
 
-  function alterarQuantidade(
-    id,
-    quantidade
-  ) {
-
-    const novaQuantidade =
-      Number(quantidade);
-
-    if (
-      !Number.isFinite(
-        novaQuantidade
-      ) ||
-      novaQuantidade < 1
-    ) {
+    if (!Number.isFinite(novaQuantidade) || novaQuantidade < 1) {
       return;
     }
 
     setItens((atual) =>
-      atual.map(
-        (item) =>
-          item.id === id
-            ? {
-                ...item,
-                quantidade:
-                  novaQuantidade,
-              }
-            : item
+      atual.map((item) =>
+        item.id === id
+          ? { ...item, quantidade: novaQuantidade }
+          : item
       )
     );
-
   }
 
-
   /* ============================================================
-     REMOVER PRODUTO
+     REMOVER / LIMPAR
   ============================================================ */
-
   function removerProduto(id) {
-
-    setItens((atual) =>
-      atual.filter(
-        (item) =>
-          item.id !== id
-      )
-    );
-
+    setItens((atual) => atual.filter((item) => item.id !== id));
     inputBuscaRef.current?.focus();
-
   }
-
-
-  /* ============================================================
-     LIMPAR VENDA
-  ============================================================ */
 
   function limparVenda() {
-
     setItens([]);
-
     setBusca("");
-
+    setCpfConsumidor("");
     setResultadoEmissao(null);
-
     setErroEmissao("");
-
     inputBuscaRef.current?.focus();
-
   }
-
 
   /* ============================================================
      TOTAIS
   ============================================================ */
+  const total = useMemo(() => {
+    return itens.reduce(
+      (soma, item) => soma + item.quantidade * item.valorVenda,
+      0
+    );
+  }, [itens]);
 
-  const total =
-    useMemo(() => {
+  const quantidadeTotal = useMemo(() => {
+    return itens.reduce(
+      (soma, item) => soma + item.quantidade,
+      0
+    );
+  }, [itens]);
 
-      return itens.reduce(
-        (soma, item) =>
-          soma +
-          item.quantidade *
-            item.valorVenda,
-        0
-      );
+  /* ============================================================
+     CPF DO CONSUMIDOR
+  ============================================================ */
+  function alterarCpfConsumidor(valor) {
+    let numeros = valor.replace(/\D/g, "").substring(0, 11);
 
-    }, [itens]);
+    numeros = numeros.replace(/(\d{3})(\d)/, "$1.$2");
+    numeros = numeros.replace(/(\d{3})(\d)/, "$1.$2");
+    numeros = numeros.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 
+    setCpfConsumidor(numeros);
+  }
 
-  const quantidadeTotal =
-    useMemo(() => {
+  function obterCpfSomenteNumeros() {
+    return cpfConsumidor.replace(/\D/g, "");
+  }
 
-      return itens.reduce(
-        (soma, item) =>
-          soma +
-          item.quantidade,
-        0
-      );
+  function cpfValido(cpf) {
+  cpf = cpf.replace(/\D/g, "");
 
-    }, [itens]);
+  if (cpf.length !== 11) {
+    return false;
+  }
 
+  // Impede 00000000000, 11111111111 etc.
+  if (/^(\d)\1{10}$/.test(cpf)) {
+    return false;
+  }
+
+  let soma = 0;
+
+  for (let i = 0; i < 9; i++) {
+    soma += Number(cpf[i]) * (10 - i);
+  }
+
+  let digito1 = (soma * 10) % 11;
+
+  if (digito1 === 10) {
+    digito1 = 0;
+  }
+
+  if (digito1 !== Number(cpf[9])) {
+    return false;
+  }
+
+  soma = 0;
+
+  for (let i = 0; i < 10; i++) {
+    soma += Number(cpf[i]) * (11 - i);
+  }
+
+  let digito2 = (soma * 10) % 11;
+
+  if (digito2 === 10) {
+    digito2 = 0;
+  }
+
+  return digito2 === Number(cpf[10]);
+}
 
   /* ============================================================
      EMITIR NFC-e
   ============================================================ */
-
   async function emitirNFCe() {
+    if (itens.length === 0 || emitindo) {
+      return;
+    }
 
-    if (
-      itens.length === 0 ||
-      emitindo
-    ) {
+    const cpf = obterCpfSomenteNumeros();
+
+    if (cpf && !cpfValido(cpf)) {
+      setErroEmissao(
+        "O CPF informado é inválido. Verifique os números digitados."
+      );
+      return;
+    }
+
+    if (!empresaId) {
+      setErroEmissao("Empresa da sessão não encontrada.");
       return;
     }
 
     const request = {
-
-      empresaId: EMPRESA_ID,
-
-      produtos: itens.map(
-        (item) => ({
-          produtoId: item.id,
-          quantidade:
-            item.quantidade,
-        })
-      ),
-
+      empresaId,
+      destinatario: {
+        cpfCnpj: cpf || null,
+      },
+      produtos: itens.map((item) => ({
+        produtoId: item.id,
+        quantidade: item.quantidade,
+      })),
     };
 
     try {
-
       setEmitindo(true);
-
       setErroEmissao("");
-
       setResultadoEmissao(null);
 
-      console.log(
-        "Enviando NFC-e:",
-        request
-      );
+      console.log("Enviando NFC-e:", request);
 
-      const resultado =
-        await autorizarNFCe(
-          request
-        );
+      const resultado = await autorizarNFCe(request);
 
-      console.log(
-        "Retorno NFC-e:",
-        resultado
-      );
+      console.log("Retorno NFC-e:", resultado);
 
-      setResultadoEmissao(
-        resultado
-      );
+      setResultadoEmissao(resultado);
 
-      alert(
-        "NFC-e processada com sucesso."
-      );
+      // Aguarda 3 segundos e prepara a próxima venda
+      setTimeout(() => {
+        setItens([]);
+        setBusca("");
+        setCpfConsumidor("");
+        setResultadoEmissao(null);
+        setErroEmissao("");
+
+        inputBuscaRef.current?.focus();
+      }, 5000);
 
     } catch (error) {
-
-      console.error(
-        "Erro na emissão da NFC-e:",
-        error
-      );
+      console.error("Erro na emissão da NFC-e:", error);
 
       setErroEmissao(
-        error.message ||
-          "Não foi possível emitir a NFC-e."
+        error.message || "Não foi possível emitir a NFC-e."
       );
 
     } finally {
-
       setEmitindo(false);
-
     }
-
   }
-
 
   /* ============================================================
      TELA
   ============================================================ */
-
   return (
-
     <div className="pagina">
-
-      {/* ========================================================
-          CABEÇALHO
-      ======================================================== */}
-
+      {/* CABEÇALHO */}
       <header className="topo">
-
         <div className="marca">
-
-          <strong>
-            FISCAL.API
-          </strong>
-
+          <strong>FISCAL.API</strong>
           <span />
-
         </div>
-
 
         <div className="divisor-topo" />
 
-
         <div className="titulo-topo">
-
-          <h1>
-            Emissão de NFC-e
-          </h1>
-
-          <p>
-            Venda para o consumidor final
-          </p>
-
+          <h1>Emissão de NFC-e</h1>
+          <p>Venda para o consumidor final</p>
         </div>
 
-
-        {/* EMPRESA / USUÁRIO */}
-
         <div className="empresa-topo">
-
           <div className="header-account">
-
             <div className="header-company-icon">
-
               <i className="bi bi-building" />
-
             </div>
 
-
             <div className="header-company">
-
-              <span className="header-company-label">
-                Empresa
-              </span>
-
+              <span className="header-company-label">Empresa</span>
               <strong>
-
                 {empresa?.nomeFantasia ||
                   empresa?.razaoSocial ||
                   "Empresa"}
-
               </strong>
-
             </div>
 
-
             <div className="header-user-wrapper">
-
               <button
                 type="button"
                 className="header-user-button"
                 onClick={() =>
-                  setMenuUsuarioAberto(
-                    (aberto) =>
-                      !aberto
-                  )
+                  setMenuUsuarioAberto((aberto) => !aberto)
                 }
               >
-
                 <div className="header-user-avatar">
-
-                  {usuario?.nome
-                    ?.charAt(0)
-                    .toUpperCase() ||
-                    "U"}
-
+                  {usuario?.nome?.charAt(0).toUpperCase() || "U"}
                 </div>
-
 
                 <div className="header-user-info">
-
-                  <strong>
-
-                    {usuario?.nome ||
-                      "Usuário"}
-
-                  </strong>
-
-                  <span>
-
-                    {usuario?.perfil ||
-                      ""}
-
-                  </span>
-
+                  <strong>{usuario?.nome || "Usuário"}</strong>
+                  <span>{usuario?.perfil || ""}</span>
                 </div>
-
 
                 <i
                   className={
@@ -622,718 +403,365 @@ export default function EmitirNFCe({ onLogout }) {
                       : "bi bi-chevron-down header-user-arrow"
                   }
                 />
-
               </button>
 
-
               {menuUsuarioAberto && (
-
                 <div className="header-user-menu">
-
                   <div className="header-user-menu-info">
-
-                    <strong>
-                      {usuario?.nome}
-                    </strong>
-
-                    <span>
-                      {usuario?.email}
-                    </span>
-
+                    <strong>{usuario?.nome}</strong>
+                    <span>{usuario?.email}</span>
                   </div>
 
-
                   <div className="header-user-menu-divider" />
-
 
                   <button
                     type="button"
                     className="header-logout"
                     onClick={onLogout}
                   >
-
                     <i className="bi bi-box-arrow-right me-2" />
-
                     Sair do sistema
-
                   </button>
-
                 </div>
-
               )}
-
             </div>
-
           </div>
-
         </div>
-
       </header>
 
-
-      {/* ========================================================
-          CONTEÚDO
-      ======================================================== */}
-
       <main className="conteudo">
-
-
-        {/* ======================================================
-            PESQUISA
-        ====================================================== */}
-
+        {/* PESQUISA */}
         <section className="card card-produto">
-
           <div className="cabecalho-produto">
-
             <div className="icone-carrinho">
-
               <i className="bi bi-cart3" />
-
             </div>
-
 
             <div>
-
-              <span className="label-azul">
-                PRODUTO
-              </span>
-
-              <h2>
-                Adicionar produto
-              </h2>
-
+              <span className="label-azul">PRODUTO</span>
+              <h2>Adicionar produto</h2>
             </div>
-
           </div>
 
-
           {erroProdutos && (
-
             <div
               className="alert alert-danger d-flex align-items-center"
               role="alert"
             >
-
               <i className="bi bi-exclamation-triangle-fill me-2" />
-
               {erroProdutos}
-
             </div>
-
           )}
 
-
           <div className="linha-pesquisa">
-
             <div className="campo-pesquisa">
-
               <i className="bi bi-search lupa" />
-
 
               <input
                 ref={inputBuscaRef}
                 type="text"
                 className="form-control"
                 value={busca}
-                onChange={(e) =>
-                  setBusca(
-                    e.target.value
-                  )
-                }
-                onKeyDown={
-                  tratarEnterPesquisa
-                }
+                onChange={(e) => setBusca(e.target.value)}
+                onKeyDown={tratarEnterPesquisa}
                 placeholder={
                   carregandoProdutos
                     ? "Carregando produtos..."
                     : "Digite o código ou descrição do produto..."
                 }
-                disabled={
-                  carregandoProdutos
-                }
+                disabled={carregandoProdutos}
                 autoFocus
               />
 
+              {busca && !carregandoProdutos && (
+                <div className="resultado-pesquisa">
+                  {produtosFiltrados.length === 0 ? (
+                    <div className="sem-resultado">
+                      <i className="bi bi-search me-2" />
+                      Nenhum produto encontrado.
+                    </div>
+                  ) : (
+                    produtosFiltrados.map((produto) => (
+                      <button
+                        key={produto.id}
+                        type="button"
+                        onClick={() => adicionarProduto(produto)}
+                      >
+                        <div>
+                          <strong>{produto.codigo}</strong>
+                          <span>{produto.descricao}</span>
+                        </div>
 
-              {busca &&
-                !carregandoProdutos && (
-
-                  <div className="resultado-pesquisa">
-
-                    {produtosFiltrados.length ===
-                    0 ? (
-
-                      <div className="sem-resultado">
-
-                        <i className="bi bi-search me-2" />
-
-                        Nenhum produto encontrado.
-
-                      </div>
-
-                    ) : (
-
-                      produtosFiltrados.map(
-                        (produto) => (
-
-                          <button
-                            key={
-                              produto.id
-                            }
-                            type="button"
-                            onClick={() =>
-                              adicionarProduto(
-                                produto
-                              )
-                            }
-                          >
-
-                            <div>
-
-                              <strong>
-                                {
-                                  produto.codigo
-                                }
-                              </strong>
-
-                              <span>
-                                {
-                                  produto.descricao
-                                }
-                              </span>
-
-                            </div>
-
-
-                            <strong>
-
-                              {formatarMoeda(
-                                produto.valorVenda
-                              )}
-
-                            </strong>
-
-                          </button>
-
-                        )
-                      )
-
-                    )}
-
-                  </div>
-
-                )}
-
+                        <strong>
+                          {formatarMoeda(produto.valorVenda)}
+                        </strong>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
 
+            {/* CPF NA NOTA */}
+            <div className="cpf-nota">
+              <div className="cpf-nota-icone">
+                <i className="bi bi-person-vcard" />
+              </div>
 
-            <div className="dica-enter">
+              <div className="cpf-nota-texto">
+                <strong>CPF na nota</strong>
+                <span>Opcional</span>
+              </div>
 
-              <i className="bi bi-keyboard me-2" />
-
-              <span>
-                Digite o{" "}
-                <strong>
-                  código
-                </strong>{" "}
-                e pressione{" "}
-                <strong>
-                  Enter
-                </strong>
-              </span>
-
+              <div className="cpf-nota-campo">
+                <input
+                  type="text"
+                  className="form-control"
+                  value={cpfConsumidor}
+                  onChange={(e) =>
+                    alterarCpfConsumidor(e.target.value)
+                  }
+                  placeholder="000.000.000-00"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  maxLength={14}
+                />
+              </div>
             </div>
-
           </div>
-
         </section>
 
-
-        {/* ======================================================
-            ERRO DE EMISSÃO
-        ====================================================== */}
-
+        {/* ERRO DA EMISSÃO */}
         {erroEmissao && (
-
           <div
             className="alert alert-danger d-flex align-items-center"
             role="alert"
           >
-
             <i className="bi bi-exclamation-triangle-fill me-2" />
-
             {erroEmissao}
-
           </div>
-
         )}
 
-
-        {/* ======================================================
-            ITENS
-        ====================================================== */}
-
+        {/* ITENS */}
         <section className="card card-venda">
-
           <div className="cabecalho-venda">
-
             <div className="cabecalho-venda-titulo">
-
               <div className="icone-documento">
-
                 <i className="bi bi-receipt" />
-
               </div>
-
 
               <div>
-
-                <span>
-                  VENDA
-                </span>
-
-                <h2>
-                  Itens da NFC-e
-                </h2>
-
+                <span>VENDA</span>
+                <h2>Itens da NFC-e</h2>
               </div>
-
             </div>
 
-
             <div className="resumo-itens">
-
               <i className="bi bi-cart3 mini-carrinho" />
 
-
-              <strong>
-                {itens.length}
-              </strong>
-
+              <strong>{itens.length}</strong>
               <span>
-
-                {itens.length === 1
-                  ? "produto"
-                  : "produtos"}
-
+                {itens.length === 1 ? "produto" : "produtos"}
               </span>
-
 
               <div className="separador" />
 
-
-              <strong>
-                {quantidadeTotal}
-              </strong>
-
+              <strong>{quantidadeTotal}</strong>
               <span>
-
-                {quantidadeTotal === 1
-                  ? "unidade"
-                  : "unidades"}
-
+                {quantidadeTotal === 1 ? "unidade" : "unidades"}
               </span>
-
             </div>
-
           </div>
 
-
-          {/* TABELA */}
-
           <div className="table-responsive tabela-container">
-
             <table className="table align-middle mb-0">
-
               <thead>
-
                 <tr>
-
-                  <th>
-                    Cód.
-                  </th>
-
-                  <th>
-                    Produto
-                  </th>
-
-                  <th>
-                    Quantidade
-                  </th>
-
-                  <th>
-                    Valor unitário
-                  </th>
-
-                  <th>
-                    Total
-                  </th>
-
-                  <th>
-                    Ações
-                  </th>
-
+                  <th>Cód.</th>
+                  <th>Produto</th>
+                  <th>Quantidade</th>
+                  <th>Valor unitário</th>
+                  <th>Total</th>
+                  <th>Ações</th>
                 </tr>
-
               </thead>
 
-
               <tbody>
-
                 {itens.length === 0 ? (
-
                   <tr>
-
-                    <td
-                      colSpan="6"
-                      className="vazio"
-                    >
-
+                    <td colSpan="6" className="vazio">
                       <div className="vazio-conteudo">
-
                         <i className="bi bi-cart-x carrinho-vazio" />
-
-                        <strong>
-                          Nenhum produto adicionado.
-                        </strong>
-
+                        <strong>Nenhum produto adicionado.</strong>
                         <span>
                           Pesquise um produto acima para iniciar a venda.
                         </span>
-
                       </div>
-
                     </td>
-
                   </tr>
-
                 ) : (
+                  itens.map((item) => (
+                    <tr key={item.id}>
+                      <td>
+                        <span className="codigo">
+                          {item.codigo}
+                        </span>
+                      </td>
 
-                  itens.map(
-                    (item) => (
+                      <td>
+                        <strong className="produto-nome">
+                          {item.descricao}
+                        </strong>
+                      </td>
 
-                      <tr key={item.id}>
+                      <td>
+                        <div className="controle-qtd">
+                          <button
+                            type="button"
+                            className="menos"
+                            title="Diminuir quantidade"
+                            onClick={() =>
+                              diminuirQuantidade(item.id)
+                            }
+                          >
+                            <i className="bi bi-dash-lg" />
+                          </button>
 
-                        {/* CÓDIGO */}
-
-                        <td>
-
-                          <span className="codigo">
-                            {item.codigo}
-                          </span>
-
-                        </td>
-
-
-                        {/* PRODUTO */}
-
-                        <td>
-
-                          <strong className="produto-nome">
-
-                            {item.descricao}
-
-                          </strong>
-
-                        </td>
-
-
-                        {/* QUANTIDADE */}
-
-                        <td>
-
-                          <div className="controle-qtd">
-
-                            <button
-                              type="button"
-                              className="menos"
-                              title="Diminuir quantidade"
-                              onClick={() =>
-                                diminuirQuantidade(
-                                  item.id
-                                )
-                              }
-                            >
-
-                              <i className="bi bi-dash-lg" />
-
-                            </button>
-
-
-                            <input
-                              type="number"
-                              min="1"
-                              value={
-                                item.quantidade
-                              }
-                              onChange={(e) =>
-                                alterarQuantidade(
-                                  item.id,
-                                  e.target.value
-                                )
-                              }
-                            />
-
-
-                            <button
-                              type="button"
-                              className="mais"
-                              title="Aumentar quantidade"
-                              onClick={() =>
-                                aumentarQuantidade(
-                                  item.id
-                                )
-                              }
-                            >
-
-                              <i className="bi bi-plus-lg" />
-
-                            </button>
-
-                          </div>
-
-                        </td>
-
-
-                        {/* VALOR */}
-
-                        <td>
-
-                          {formatarMoeda(
-                            item.valorVenda
-                          )}
-
-                        </td>
-
-
-                        {/* TOTAL */}
-
-                        <td>
-
-                          <strong className="valor-total-item">
-
-                            {formatarMoeda(
-                              item.quantidade *
-                                item.valorVenda
-                            )}
-
-                          </strong>
-
-                        </td>
-
-
-                        {/* AÇÕES */}
-
-                        <td>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantidade}
+                            onChange={(e) =>
+                              alterarQuantidade(
+                                item.id,
+                                e.target.value
+                              )
+                            }
+                          />
 
                           <button
                             type="button"
-                            className="btn btn-outline-danger btn-remover"
+                            className="mais"
+                            title="Aumentar quantidade"
                             onClick={() =>
-                              removerProduto(
-                                item.id
-                              )
+                              aumentarQuantidade(item.id)
                             }
                           >
-
-                            <i className="bi bi-trash3 me-2" />
-
-                            Remover
-
+                            <i className="bi bi-plus-lg" />
                           </button>
+                        </div>
+                      </td>
 
-                        </td>
+                      <td>
+                        {formatarMoeda(item.valorVenda)}
+                      </td>
 
-                      </tr>
+                      <td>
+                        <strong className="valor-total-item">
+                          {formatarMoeda(
+                            item.quantidade * item.valorVenda
+                          )}
+                        </strong>
+                      </td>
 
-                    )
-                  )
-
+                      <td>
+                        <button
+                          type="button"
+                          className="btn btn-outline-danger btn-remover"
+                          onClick={() =>
+                            removerProduto(item.id)
+                          }
+                        >
+                          <i className="bi bi-trash3 me-2" />
+                          Remover
+                        </button>
+                      </td>
+                    </tr>
+                  ))
                 )}
-
               </tbody>
-
             </table>
-
           </div>
-
         </section>
 
-
-        {/* ======================================================
-            RODAPÉ DA VENDA
-        ====================================================== */}
-
+        {/* RODAPÉ */}
         <section className="card rodape-venda">
-
-
-          {/* LIMPAR */}
-
           <button
             type="button"
             className="btn btn-outline-danger btn-limpar"
-            onClick={
-              limparVenda
-            }
-            disabled={
-              itens.length === 0
-            }
+            onClick={limparVenda}
+            disabled={itens.length === 0}
           >
-
             <i className="bi bi-trash3" />
-
             Limpar venda
-
           </button>
-
 
           <div className="separador-rodape" />
 
-
-          {/* UNIDADES */}
-
           <div className="total-unidades">
-
             <div className="icone-unidades">
-
               <i className="bi bi-box-seam" />
-
             </div>
-
 
             <div>
-
-              <span>
-                Total de unidades
-              </span>
-
+              <span>Total de unidades</span>
               <strong>
-
                 {quantidadeTotal}{" "}
-
-                {quantidadeTotal === 1
-                  ? "unidade"
-                  : "unidades"}
-
+                {quantidadeTotal === 1 ? "unidade" : "unidades"}
               </strong>
-
             </div>
-
           </div>
-
 
           <div className="espacador" />
 
-
-          {/* TOTAL */}
-
           <div className="total-nfce">
-
-            <span>
-              Total da NFC-e
-            </span>
-
-            <strong>
-
-              {formatarMoeda(
-                total
-              )}
-
-            </strong>
-
+            <span>Total da NFC-e</span>
+            <strong>{formatarMoeda(total)}</strong>
           </div>
-
-
-          {/* EMITIR */}
 
           <button
             type="button"
             className="btn btn-emitir"
-            onClick={
-              emitirNFCe
-            }
-            disabled={
-              itens.length === 0 ||
-              emitindo
-            }
+            onClick={emitirNFCe}
+            disabled={itens.length === 0 || emitindo}
           >
-
             {emitindo ? (
-
               <>
-
                 <span
                   className="spinner-border spinner-border-sm"
                   aria-hidden="true"
                 />
-
                 Emitindo...
-
               </>
-
             ) : (
-
               <>
-
                 <i className="bi bi-receipt" />
-
                 Emitir NFC-e
-
               </>
-
             )}
-
           </button>
-
         </section>
 
-
-        {/* ======================================================
-            RETORNO DA EMISSÃO
-        ====================================================== */}
-
+        {/* RETORNO */}
         {resultadoEmissao && (
-
           <div className="alert alert-success mt-3">
-
             <div className="d-flex align-items-center">
-
               <i className="bi bi-check-circle-fill me-2" />
-
-              <strong>
-                NFC-e processada com sucesso.
-              </strong>
-
+              <strong>NFC-e processada com sucesso.</strong>
             </div>
-
           </div>
-
         )}
-
       </main>
-
     </div>
-
   );
-
 }
-
 
 /* ============================================================
    FORMATAR MOEDA
 ============================================================ */
-
 function formatarMoeda(valor) {
-
-  return Number(
-    valor || 0
-  ).toLocaleString(
-    "pt-BR",
-    {
-      style: "currency",
-      currency: "BRL",
-    }
-  );
-
+  return Number(valor || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
 }

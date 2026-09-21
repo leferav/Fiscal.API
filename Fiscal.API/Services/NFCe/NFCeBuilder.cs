@@ -3,6 +3,7 @@ using DFe.Classes.Flags;
 using Fiscal.API.Models.Database;
 using Fiscal.API.Models.NFe;
 using Fiscal.API.Services.NFe;
+using NFe.Classes.Informacoes.Destinatario;
 using NFe.Classes.Informacoes.Identificacao;
 using NFe.Classes.Informacoes.Identificacao.Tipos;
 
@@ -36,7 +37,8 @@ namespace Fiscal.API.Services.NFCe
         public global::NFe.Classes.NFe Criar(
             List<ItemFiscal> itensFiscais,
             Empresa empresa,
-            ConfiguracaoFiscal configuracaoFiscal)
+            ConfiguracaoFiscal configuracaoFiscal,
+            DestinatarioRequest? destinatario = null)
         {
             var nfce = new global::NFe.Classes.NFe
             {
@@ -56,6 +58,12 @@ namespace Fiscal.API.Services.NFCe
             // Emitente
             nfce.infNFe.emit =
                 _emitenteBuilder.Criar(empresa);
+
+            // Destinatário / CPF na nota
+            MontarDestinatario(
+                nfce,
+                destinatario
+            );
 
             // Produtos
             nfce.infNFe.det =
@@ -82,6 +90,53 @@ namespace Fiscal.API.Services.NFCe
                 );
 
             return nfce;
+        }
+
+        // ============================================================
+        // Destinatário da NFC-e
+        // CPF na nota é opcional
+        // ============================================================
+        private void MontarDestinatario(
+            global::NFe.Classes.NFe nfce,
+            DestinatarioRequest? destinatario)
+        {
+            if (destinatario == null ||
+                string.IsNullOrWhiteSpace(destinatario.CpfCnpj))
+            {
+                return;
+            }
+
+            // Remove pontos, traços, barras etc.
+            var documento = new string(
+                destinatario.CpfCnpj
+                    .Where(char.IsDigit)
+                    .ToArray()
+            );
+
+            // valida CPF.
+            if (!CpfValido(documento))
+            {
+                throw new Exception(
+                    "O CPF informado é inválido."
+                );
+            }
+
+            nfce.infNFe.dest = new dest(
+                VersaoServico.Versao400
+            )
+            {
+                CPF = documento,
+
+                indIEDest =
+                    indIEDest.NaoContribuinte
+            };
+
+            // Nome é opcional para nosso fluxo atual.
+            if (!string.IsNullOrWhiteSpace(destinatario.Nome))
+            {
+                nfce.infNFe.dest.xNome =
+                    destinatario.Nome.Trim();
+            }
         }
 
         // ============================================================
@@ -192,6 +247,53 @@ namespace Fiscal.API.Services.NFCe
                 // Versão do sistema
                 verProc = "Fiscal.API 1.0"
             };
+        }
+
+
+        private static bool CpfValido(string cpf)
+        {
+            cpf = new string(
+                cpf.Where(char.IsDigit).ToArray()
+            );
+
+            if (cpf.Length != 11)
+                return false;
+
+            if (cpf.Distinct().Count() == 1)
+                return false;
+
+            var numeros = cpf
+                .Select(c => c - '0')
+                .ToArray();
+
+            var soma = 0;
+
+            for (var i = 0; i < 9; i++)
+                soma += numeros[i] * (10 - i);
+
+            var resto = soma % 11;
+
+            var digito1 =
+                resto < 2
+                    ? 0
+                    : 11 - resto;
+
+            if (numeros[9] != digito1)
+                return false;
+
+            soma = 0;
+
+            for (var i = 0; i < 10; i++)
+                soma += numeros[i] * (11 - i);
+
+            resto = soma % 11;
+
+            var digito2 =
+                resto < 2
+                    ? 0
+                    : 11 - resto;
+
+            return numeros[10] == digito2;
         }
     }
 }

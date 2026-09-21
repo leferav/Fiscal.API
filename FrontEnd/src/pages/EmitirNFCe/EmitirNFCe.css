@@ -668,46 +668,6 @@
   text-align: center;
 }
 
-
-/* ============================================================
-   DICA ENTER
-============================================================ */
-
-.dica-enter {
-  width: 220px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  padding: 0 14px;
-
-  color:
-    var(--color-text-secondary);
-
-  background: #edf5fb;
-
-  border-radius: 9px;
-
-  font-size: 11px;
-  line-height: 1.35;
-
-  text-align: center;
-}
-
-.dica-enter i {
-  color:
-    var(--color-primary);
-
-  font-size: 16px;
-}
-
-.dica-enter strong {
-  color:
-    var(--color-text-primary);
-}
-
-
 /* ============================================================
    VENDA
 ============================================================ */
@@ -1516,6 +1476,166 @@
 
   .btn-emitir {
     width: 100%;
+  }
+
+}
+
+
+
+
+/* ============================================================
+   LINHA PESQUISA + CPF
+============================================================ */
+
+.linha-pesquisa {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+}
+
+
+/* ============================================================
+   CPF NA NOTA
+============================================================ */
+
+.cpf-nota {
+  width: 390px;
+  min-width: 390px;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 8px 12px;
+
+  background: #eef6fc;
+
+  border-radius: 9px;
+}
+
+
+/* ÍCONE */
+
+.cpf-nota-icone {
+  width: 38px;
+  height: 38px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  color: var(--color-primary);
+
+  background: #ffffff;
+
+  border-radius: 8px;
+
+  font-size: 17px;
+}
+
+
+/* TEXTO */
+
+.cpf-nota-texto {
+  min-width: 78px;
+
+  display: flex;
+  flex-direction: column;
+
+  line-height: 1.15;
+}
+
+.cpf-nota-texto strong {
+  color: var(--color-text-primary);
+
+  font-size: 11px;
+  font-weight: 700;
+
+  white-space: nowrap;
+}
+
+.cpf-nota-texto span {
+  margin-top: 3px;
+
+  color: var(--color-text-muted);
+
+  font-size: 9px;
+}
+
+
+/* CAMPO */
+
+.cpf-nota-campo {
+  flex: 1;
+  min-width: 0;
+}
+
+.cpf-nota-campo .form-control {
+  width: 100%;
+  height: 38px;
+
+  padding: 0 10px;
+
+  color: var(--color-text-primary);
+  background: #ffffff;
+
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+
+  font-size: 11px;
+
+  box-shadow: none;
+}
+
+.cpf-nota-campo .form-control:focus {
+  border-color: var(--color-primary);
+
+  box-shadow:
+    0 0 0 3px
+    rgba(8, 106, 187, 0.10);
+}
+
+.cpf-nota-campo .form-control::placeholder {
+  color: #9baebe;
+}
+
+
+/* ============================================================
+   RESPONSIVO
+============================================================ */
+
+@media (max-width: 900px) {
+
+  .linha-pesquisa {
+    flex-direction: column;
+  }
+
+  .cpf-nota {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .cpf-nota-campo {
+    flex: 1;
+  }
+
+}
+
+
+@media (max-width: 480px) {
+
+  .cpf-nota {
+    flex-wrap: wrap;
+  }
+
+  .cpf-nota-texto {
+    flex: 1;
+  }
+
+  .cpf-nota-campo {
+    flex-basis: 100%;
   }
 
 }

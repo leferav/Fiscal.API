@@ -1,50 +1,142 @@
-const API_URL = "https://localhost:7211";
+import {
+  obterToken,
+  logout,
+} from "./authService";
 
-export async function obterProdutosPorEmpresa(empresaId) {
-  const response = await fetch(
-    `${API_URL}/api/cadastros/produtos/empresa/${empresaId}`
-  );
+import {
+  apiRequest,
+} from "./apiClient";
+
+
+/* ============================================================
+   HEADERS AUTENTICADOS
+============================================================ */
+
+function criarHeaders(
+  contentType = true
+) {
+
+  const token =
+    obterToken();
+
+
+  const headers = {};
+
+
+  if (contentType) {
+
+    headers["Content-Type"] =
+      "application/json";
+
+  }
+
+
+  if (token) {
+
+    headers["Authorization"] =
+      `Bearer ${token}`;
+
+  }
+
+
+  return headers;
+
+}
+
+
+/* ============================================================
+   TRATAR RESPOSTA NÃO AUTORIZADA
+============================================================ */
+
+function verificarAutenticacao(
+  response
+) {
+
+  if (response.status === 401) {
+
+    /*
+      Token inválido ou expirado.
+
+      Limpamos a sessão para impedir
+      que o frontend continue utilizando
+      credenciais inválidas.
+    */
+
+    logout();
+
+
+    throw new Error(
+      "Sua sessão expirou. Faça login novamente."
+    );
+
+  }
+
+}
+
+
+/* ============================================================
+   CONSULTAR PRODUTOS DA EMPRESA
+============================================================ */
+
+export async function obterProdutosPorEmpresa(
+  empresaId
+) {
+  if (!empresaId) {
+    throw new Error(
+      "Empresa não informada para consultar os produtos."
+    );
+  }
+
+  const { response, dados } =
+    await apiRequest(
+      `/api/cadastros/produtos/empresa/${empresaId}`,
+      {
+        method: "GET",
+        headers: criarHeaders(false),
+      }
+    );
+
+  verificarAutenticacao(response);
 
   if (!response.ok) {
     throw new Error(
+      dados?.erro ||
+      dados?.mensagem ||
+      dados?.message ||
       `Erro ao consultar produtos. HTTP ${response.status}`
     );
   }
 
-  return await response.json();
+  return dados;
 }
 
-export async function autorizarNFCe(dados) {
-  const response = await fetch(
-    `${API_URL}/api/nfce/autorizar`,
+/* ============================================================
+   AUTORIZAR NFC-e
+============================================================ */
+
+export async function autorizarNFCe(
+  dados
+) {
+  const {
+    response,
+    dados: resultado,
+  } = await apiRequest(
+    "/api/nfce/autorizar",
     {
       method: "POST",
-
-      headers: {
-        "Content-Type": "application/json",
-      },
-
+      headers: criarHeaders(true),
       body: JSON.stringify(dados),
     }
   );
 
-  const texto = await response.text();
-
-  let resultado;
-
-  try {
-    resultado = texto ? JSON.parse(texto) : {};
-  } catch {
-    resultado = {
-      mensagem: texto,
-    };
-  }
+  verificarAutenticacao(response);
 
   if (!response.ok) {
     throw new Error(
+      resultado?.erro ||
       resultado?.mensagem ||
-        resultado?.message ||
-        `Erro ao emitir NFC-e. HTTP ${response.status}`
+      resultado?.message ||
+      `Erro ao emitir NFC-e. HTTP ${response.status}`
     );
   }
 
