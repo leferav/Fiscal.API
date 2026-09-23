@@ -1,5 +1,6 @@
-const API_URL = "https://localhost:7211";
-
+const API_URL =
+  import.meta.env.VITE_API_URL || "https://localhost:7211";
+  
 export async function apiRequest(
   endpoint,
   options = {}
