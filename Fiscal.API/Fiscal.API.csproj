@@ -18,4 +18,11 @@
     <PackageReference Include="Zeus.Net.NFe.NFCe" Version="2026.8.18.2047" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Schemas\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

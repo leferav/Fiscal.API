@@ -179,72 +179,33 @@ namespace Fiscal.API.Services.NFCe
             var serie =
                 configuracaoFiscal.SerieNFCe;
 
-            // ========================================================
-            // IDE
-            // ========================================================
 
+
+            // IDE
+            var fusoBrasil = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
+            var dataHoraEmissao = TimeZoneInfo.ConvertTime(
+                DateTimeOffset.UtcNow,
+                fusoBrasil
+            );
             nfce.infNFe.ide = new ide
             {
-                // UF
                 cUF = estado,
-
-                // Código numérico da chave
-                cNF = Random.Shared
-                    .Next(10000000, 99999999)
-                    .ToString(),
-
-                // Natureza da operação
+                cNF = Random.Shared.Next(10000000, 99999999).ToString(),
                 natOp = "VENDA",
-
-                // Modelo 65 - NFC-e
                 mod = ModeloDocumento.NFCe,
-
-                // Série
                 serie = serie,
-
-                // Número vindo do banco
                 nNF = numeroNFCe,
-
-                // Data/hora
-                dhEmi = DateTimeOffset.Now,
-
-                // Saída
+                dhEmi = dataHoraEmissao,
                 tpNF = TipoNFe.tnSaida,
-
-                // Operação interna
                 idDest = DestinoOperacao.doInterna,
-
-                // Município do fato gerador
                 cMunFG = empresa.CodigoMunicipio,
-
-                // DANFE NFC-e
                 tpImp = TipoImpressao.tiNFCe,
-
-                // Emissão normal
                 tpEmis = TipoEmissao.teNormal,
-
-                // Ambiente
                 tpAmb = ambiente,
-
-                // Finalidade normal
                 finNFe = FinalidadeNFe.fnNormal,
-
-                // Consumidor final
-                indFinal =
-                    ConsumidorFinal
-                        .cfConsumidorFinal,
-
-                // Operação presencial
-                indPres =
-                    PresencaComprador
-                        .pcPresencial,
-
-                // Aplicativo do contribuinte
-                procEmi =
-                    ProcessoEmissao
-                        .peAplicativoContribuinte,
-
-                // Versão do sistema
+                indFinal = ConsumidorFinal.cfConsumidorFinal,
+                indPres =PresencaComprador.pcPresencial,
+                procEmi = ProcessoEmissao.peAplicativoContribuinte,
                 verProc = "Fiscal.API 1.0"
             };
         }

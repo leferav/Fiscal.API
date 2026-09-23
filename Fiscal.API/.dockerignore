@@ -1,0 +1,18 @@
+bin/
+obj/
+.vs/
+.git/
+.gitignore
+
+*.user
+*.suo
+*.log
+
+appsettings.Development.json
+
+# Certificados nunca devem entrar na imagem
+Certificados/
+*.pfx
+*.p12
+*.pem
+*.key

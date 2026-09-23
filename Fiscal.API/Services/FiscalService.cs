@@ -297,6 +297,23 @@ namespace Fiscal.API.Services
 
             var xmlNfce = nfce.ObterXmlString();
 
+
+
+            var caminhoXml = Path.Combine(
+                AppContext.BaseDirectory,
+                $"nfce-{configuracaoFiscal.ProximoNumeroNFCe}.xml"
+);
+
+            File.WriteAllText(
+                caminhoXml,
+                xmlNfce,
+                new System.Text.UTF8Encoding(false)
+            );
+
+            Console.WriteLine($"XML salvo em: {caminhoXml}");
+
+
+
             using var servicoNFe = new ServicosNFe(configuracao);
 
             var idLote = 1;
@@ -360,10 +377,9 @@ namespace Fiscal.API.Services
 
             _context.NotasFiscais.Add(notaFiscal);
 
-            if (autorizada)
-            {
-                configuracaoFiscal.ProximoNumeroNFCe++;
-            }
+            // O número da NFC-e já foi utilizado em uma tentativa de transmissão.
+            // Avança independentemente de autorização ou rejeição para não reutilizá-lo.
+            configuracaoFiscal.ProximoNumeroNFCe++;
 
             await _context.SaveChangesAsync();
 

@@ -9,6 +9,17 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Certificado PFX vindo de variável de ambiente (Koyeb)
+var certificadoBase64 = Environment.GetEnvironmentVariable("CERT_PFX_BASE64");
+if (!string.IsNullOrWhiteSpace(certificadoBase64))
+{
+    var certificadoBytes = Convert.FromBase64String(certificadoBase64);
+    var caminhoCertificado = Path.Combine(Path.GetTempPath(), "certificado.pfx");
+
+    File.WriteAllBytes(caminhoCertificado, certificadoBytes);
+    builder.Configuration["Fiscal:Certificado"] = caminhoCertificado;
+}
+
 // Banco de dados
 builder.Services.AddDbContext<FiscalDbContext>(options =>
     options.UseNpgsql(
