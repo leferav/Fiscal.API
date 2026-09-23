@@ -113,7 +113,7 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins(
                 "http://localhost:5173",
-                "https://fiscal-web-piota.vercel.app"
+                "https://fiscal-web-iota.vercel.app"
             )
             .AllowAnyHeader()
             .AllowAnyMethod();
