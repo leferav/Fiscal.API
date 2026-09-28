@@ -1,12 +1,14 @@
 ﻿using Fiscal.API.Data;
 using Fiscal.API.Models.Database;
 using Fiscal.API.Models.Requests.Cadastros;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Fiscal.API.Controllers.Cadastros
 {
     [ApiController]
+    [Authorize]
     [Route("api/cadastros/configuracoes-tributarias")]
     public class ConfiguracoesTributariasController : ControllerBase
     {
@@ -18,13 +20,20 @@ namespace Fiscal.API.Controllers.Cadastros
             _context = context;
         }
 
-        // ============================================================
-        // GET - configurações tributárias da empresa
-        // ============================================================
-        [HttpGet("empresa/{empresaId:guid}")]
-        public async Task<IActionResult> ObterPorEmpresa(
-            Guid empresaId)
+        [HttpGet]
+        public async Task<IActionResult> ObterConfiguracoes()
         {
+            var empresaIdClaim = User.FindFirst("empresaId")?.Value;
+
+            if (string.IsNullOrWhiteSpace(empresaIdClaim) ||
+                !Guid.TryParse(empresaIdClaim, out var empresaId))
+            {
+                return Unauthorized(new
+                {
+                    mensagem = "Empresa não identificada no token."
+                });
+            }
+
             var configuracoes =
                 await _context.ConfiguracoesTributarias
                     .AsNoTracking()
@@ -32,29 +41,47 @@ namespace Fiscal.API.Controllers.Cadastros
                         x.EmpresaId == empresaId &&
                         x.Ativo)
                     .OrderBy(x => x.Nome)
+                    .Select(x => new
+                    {
+                        x.Id,
+                        x.Nome,
+                        x.Cfop,
+                        x.CstIcms,
+                        x.Csosn,
+                        x.AliquotaIcms,
+                        x.Ativo
+                    })
                     .ToListAsync();
 
             return Ok(configuracoes);
         }
 
-        // ============================================================
-        // POST - cadastrar configuração tributária
-        // ============================================================
+
         [HttpPost]
-        public async Task<IActionResult> Cadastrar(
-            [FromBody]
-            CadastrarConfiguracaoTributariaRequest request)
+        public async Task<IActionResult> Cadastrar([FromBody] CadastrarConfiguracaoTributariaRequest request)
         {
+            var empresaIdClaim = User.FindFirst("empresaId")?.Value;
+
+            if (string.IsNullOrWhiteSpace(empresaIdClaim) ||
+                !Guid.TryParse(empresaIdClaim, out var empresaId))
+            {
+                return Unauthorized(new
+                {
+                    mensagem = "Empresa não identificada no token."
+                });
+            }
+
             var empresaExiste =
                 await _context.Empresas
                     .AnyAsync(x =>
-                        x.Id == request.EmpresaId);
+                        x.Id == empresaId &&
+                        x.Ativo);
 
             if (!empresaExiste)
             {
                 return BadRequest(new
                 {
-                    erro = "Empresa não encontrada."
+                    erro = "Empresa não encontrada ou inativa."
                 });
             }
 
@@ -79,7 +106,7 @@ namespace Fiscal.API.Controllers.Cadastros
                 {
                     Id = Guid.NewGuid(),
 
-                    EmpresaId = request.EmpresaId,
+                    EmpresaId = empresaId,
 
                     Nome = request.Nome.Trim(),
 

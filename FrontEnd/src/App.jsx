@@ -7,6 +7,8 @@ import {
 } from "react-router-dom";
 
 import Login from "./pages/Login/Login";
+import Produtos from "./pages/Produtos/Produtos";
+import NovoProduto from "./pages/Produtos/NovoProduto";
 import EmitirNFCe from "./pages/EmitirNFCe/EmitirNFCe";
 import AppLayout from "./components/layout/AppLayout";
 import NotasFiscais from "./pages/NotasFiscais/NotasFiscais";
@@ -63,6 +65,16 @@ function App() {
             <Route
               path="/fiscal/notas/:id"
               element={<NotaFiscalDetalhes />}
+            />
+
+            <Route
+              path="/cadastros/produtos"
+              element={<Produtos />}
+            />
+
+            <Route
+              path="/cadastros/produtos/novo"
+              element={<NovoProduto />}
             />
 
           </Route>

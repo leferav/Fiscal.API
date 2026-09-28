@@ -2,7 +2,6 @@
 {
     public class CadastrarProdutoRequest
     {
-        public Guid EmpresaId { get; set; }
 
         public string Codigo { get; set; } = string.Empty;
 

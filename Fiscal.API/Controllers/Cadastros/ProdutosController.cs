@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Fiscal.API.Controllers.Cadastros
 {
     [ApiController]
+    [Authorize]
     [Route("api/cadastros/produtos")]
     public class ProdutosController : ControllerBase
     {
@@ -18,7 +19,6 @@ namespace Fiscal.API.Controllers.Cadastros
             _context = context;
         }
 
-        [Authorize]
         [HttpGet]
         public async Task<IActionResult> ObterProdutos()
         {
@@ -57,9 +57,22 @@ namespace Fiscal.API.Controllers.Cadastros
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> ObterPorId(Guid id)
         {
+            var empresaIdClaim = User.FindFirst("empresaId")?.Value;
+
+            if (string.IsNullOrWhiteSpace(empresaIdClaim) ||
+                !Guid.TryParse(empresaIdClaim, out var empresaId))
+            {
+                return Unauthorized(new
+                {
+                    mensagem = "Empresa não identificada no token."
+                });
+            }
+
             var produto = await _context.Produtos
                 .AsNoTracking()
-                .Where(x => x.Id == id)
+                .Where(x =>
+                    x.Id == id &&
+                    x.EmpresaId == empresaId)
                 .Select(x => new
                 {
                     x.Id,
@@ -68,6 +81,7 @@ namespace Fiscal.API.Controllers.Cadastros
                     x.Descricao,
                     x.Ncm,
                     x.Unidade,
+                    x.ValorVenda,
                     x.ConfiguracaoTributariaId,
 
                     Tributacao = new
@@ -133,11 +147,14 @@ namespace Fiscal.API.Controllers.Cadastros
         [HttpPost]
         public async Task<IActionResult> Cadastrar([FromBody] CadastrarProdutoRequest request)
         {
-            if (request.EmpresaId == Guid.Empty)
+            var empresaIdClaim = User.FindFirst("empresaId")?.Value;
+
+            if (string.IsNullOrWhiteSpace(empresaIdClaim) ||
+                !Guid.TryParse(empresaIdClaim, out var empresaId))
             {
-                return BadRequest(new
+                return Unauthorized(new
                 {
-                    erro = "Informe a empresa."
+                    mensagem = "Empresa não identificada no token."
                 });
             }
 
@@ -176,7 +193,7 @@ namespace Fiscal.API.Controllers.Cadastros
             var empresaExiste =
                 await _context.Empresas.AnyAsync(
                     x =>
-                        x.Id == request.EmpresaId &&
+                        x.Id == empresaId &&
                         x.Ativo
                 );
 
@@ -193,7 +210,7 @@ namespace Fiscal.API.Controllers.Cadastros
                 await _context.ConfiguracoesTributarias.AnyAsync(
                     x =>
                         x.Id == request.ConfiguracaoTributariaId &&
-                        x.EmpresaId == request.EmpresaId &&
+                        x.EmpresaId == empresaId &&
                         x.Ativo
                 );
 
@@ -212,7 +229,7 @@ namespace Fiscal.API.Controllers.Cadastros
             var codigoExiste =
                 await _context.Produtos.AnyAsync(
                     x =>
-                        x.EmpresaId == request.EmpresaId &&
+                        x.EmpresaId == empresaId &&
                         x.Codigo == codigo
                 );
 
@@ -234,7 +251,7 @@ namespace Fiscal.API.Controllers.Cadastros
             {
                 Id = Guid.NewGuid(),
 
-                EmpresaId = request.EmpresaId,
+                EmpresaId = empresaId,
 
                 Codigo = codigo,
 
