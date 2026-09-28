@@ -14,6 +14,7 @@ public class FiscalDbContext : DbContext
     public DbSet<ConfiguracaoTributaria> ConfiguracoesTributarias => Set<ConfiguracaoTributaria>();
     public DbSet<Produto> Produtos => Set<Produto>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
+    public DbSet<Ncm> Ncms => Set<Ncm>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -24,6 +25,7 @@ public class FiscalDbContext : DbContext
         ConfigurarNotaFiscal(modelBuilder);
         ConfigurarConfiguracaoTributaria(modelBuilder);
         ConfigurarProduto(modelBuilder);
+        ConfigurarNcm(modelBuilder);    
         ConfigurarUsuario(modelBuilder);
     }
 
@@ -239,5 +241,30 @@ public class FiscalDbContext : DbContext
             .WithMany(x => x.Usuarios)
             .HasForeignKey(x => x.EmpresaId)
             .OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigurarNcm(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<Ncm>();
+
+        entity.ToTable("ncms");
+
+        entity.HasKey(x => x.Id);
+
+        entity.Property(x => x.Codigo)
+            .HasMaxLength(8)
+            .IsRequired();
+
+        entity.Property(x => x.Descricao)
+            .HasColumnType("text")
+            .IsRequired();
+
+        entity.HasIndex(x => x.Codigo)
+            .IsUnique();
+
+        entity.HasIndex(x => x.Descricao);
+
+        entity.Property(x => x.Ativo)
+            .IsRequired();
     }
 }

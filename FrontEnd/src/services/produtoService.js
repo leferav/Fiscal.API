@@ -17,6 +17,23 @@ export async function obterProdutos() {
   return dados;
 }
 
+export async function obterProdutoPorId(id) {
+  const { response, dados } =
+    await apiRequestAutenticado(
+      `/api/cadastros/produtos/${id}`
+    );
+
+  if (!response.ok) {
+    throw new Error(
+      dados?.mensagem ||
+      dados?.erro ||
+      "Não foi possível carregar o produto."
+    );
+  }
+
+  return dados;
+}
+
 export async function obterConfiguracoesTributarias() {
   const { response, dados } =
     await apiRequestAutenticado(
@@ -50,6 +67,28 @@ export async function cadastrarProduto(produto) {
       dados?.erro ||
       (typeof dados === "string" ? dados : null) ||
       "Não foi possível cadastrar o produto."
+    );
+  }
+
+  return dados;
+}
+
+export async function alterarProduto(id, produto) {
+  const { response, dados } =
+    await apiRequestAutenticado(
+      `/api/cadastros/produtos/${id}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(produto),
+      }
+    );
+
+  if (!response.ok) {
+    throw new Error(
+      dados?.mensagem ||
+      dados?.erro ||
+      (typeof dados === "string" ? dados : null) ||
+      "Não foi possível alterar o produto."
     );
   }
 

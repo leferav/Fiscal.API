@@ -311,13 +311,15 @@ export default function EmitirNFCe({ onLogout }) {
 
       console.log("Enviando NFC-e:", request);
 
-      const resultado = await autorizarNFCe(request);
+    const resultado = await autorizarNFCe(request);
 
-      console.log("Retorno NFC-e:", resultado);
+    console.log("Retorno NFC-e:", resultado);
 
+    // NFC-e autorizada pela SEFAZ
+    if (Number(resultado?.cStat) === 100) {
       setResultadoEmissao(resultado);
 
-      // Aguarda 3 segundos e prepara a próxima venda
+      // Prepara a próxima venda somente quando autorizada
       setTimeout(() => {
         setItens([]);
         setBusca("");
@@ -327,6 +329,20 @@ export default function EmitirNFCe({ onLogout }) {
 
         inputBuscaRef.current?.focus();
       }, 5000);
+
+      return;
+    }
+
+    // NFC-e rejeitada pela SEFAZ
+    setResultadoEmissao(null);
+
+    setErroEmissao(
+      resultado?.mensagem ||
+      resultado?.xMotivo ||
+      resultado?.motivo ||
+      `NFC-e rejeitada pela SEFAZ. cStat: ${resultado?.cStat ?? "-"}`
+    );
+
 
     } catch (error) {
       console.error("Erro na emissão da NFC-e:", error);

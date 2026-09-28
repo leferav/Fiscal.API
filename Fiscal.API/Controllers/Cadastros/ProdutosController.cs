@@ -291,5 +291,135 @@ namespace Fiscal.API.Controllers.Cadastros
                 produto.Ativo
             });
         }
+
+        [HttpPut("{id:guid}")]
+        public async Task<IActionResult> Alterar(Guid id, [FromBody] AlterarProdutoRequest request)
+        {
+            var empresaIdClaim = User.FindFirst("empresaId")?.Value;
+
+            if (string.IsNullOrWhiteSpace(empresaIdClaim) ||
+                !Guid.TryParse(empresaIdClaim, out var empresaId))
+            {
+                return Unauthorized(new
+                {
+                    mensagem = "Empresa não identificada no token."
+                });
+            }
+
+            var produto = await _context.Produtos
+                .FirstOrDefaultAsync(x =>
+                    x.Id == id &&
+                    x.EmpresaId == empresaId);
+
+            if (produto == null)
+            {
+                return NotFound(new
+                {
+                    erro = "Produto não encontrado."
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Codigo))
+            {
+                return BadRequest(new
+                {
+                    erro = "Informe o código do produto."
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Descricao))
+            {
+                return BadRequest(new
+                {
+                    erro = "Informe a descrição do produto."
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Ncm))
+            {
+                return BadRequest(new
+                {
+                    erro = "Informe o NCM do produto."
+                });
+            }
+
+            if (request.ConfiguracaoTributariaId == Guid.Empty)
+            {
+                return BadRequest(new
+                {
+                    erro = "Informe a configuração tributária."
+                });
+            }
+
+            if (request.ValorVenda <= 0)
+            {
+                return BadRequest(new
+                {
+                    erro = "O valor de venda deve ser maior que zero."
+                });
+            }
+
+            var configuracaoExiste =
+                await _context.ConfiguracoesTributarias.AnyAsync(x =>
+                    x.Id == request.ConfiguracaoTributariaId &&
+                    x.EmpresaId == empresaId &&
+                    x.Ativo);
+
+            if (!configuracaoExiste)
+            {
+                return BadRequest(new
+                {
+                    erro =
+                        "Configuração tributária não encontrada, inativa " +
+                        "ou pertencente a outra empresa."
+                });
+            }
+
+            var codigo = request.Codigo.Trim();
+
+            var codigoExiste =
+                await _context.Produtos.AnyAsync(x =>
+                    x.EmpresaId == empresaId &&
+                    x.Codigo == codigo &&
+                    x.Id != id);
+
+            if (codigoExiste)
+            {
+                return BadRequest(new
+                {
+                    erro =
+                        $"Já existe outro produto com o código {codigo} nesta empresa."
+                });
+            }
+
+            produto.Codigo = codigo;
+            produto.Descricao = request.Descricao.Trim();
+            produto.Ncm = request.Ncm.Trim();
+
+            produto.Unidade =
+                string.IsNullOrWhiteSpace(request.Unidade)
+                    ? "UN"
+                    : request.Unidade.Trim().ToUpper();
+
+            produto.ValorVenda = request.ValorVenda;
+
+            produto.ConfiguracaoTributariaId =
+                request.ConfiguracaoTributariaId;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                produto.Id,
+                produto.EmpresaId,
+                produto.Codigo,
+                produto.Descricao,
+                produto.Ncm,
+                produto.Unidade,
+                produto.ValorVenda,
+                produto.ConfiguracaoTributariaId,
+                produto.Ativo
+            });
+        }
     }
 }

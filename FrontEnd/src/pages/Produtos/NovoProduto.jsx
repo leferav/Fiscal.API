@@ -1,42 +1,96 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  cadastrarProduto,
-  obterConfiguracoesTributarias,
-} from "../../services/produtoService";
+import { useNavigate, useParams } from "react-router-dom";
+import { cadastrarProduto, alterarProduto, obterConfiguracoesTributarias, obterProdutoPorId, } from "../../services/produtoService";
 import "./Produtos.css";
 
 export default function NovoProduto() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const editando = Boolean(id);
 
   const [configuracoes, setConfiguracoes] = useState([]);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
 
-  const [form, setForm] = useState({
+    const [form, setForm] = useState({
     codigo: "",
     descricao: "",
     ncm: "",
     unidade: "UN",
     valorVenda: "",
     configuracaoTributariaId: "",
-  });
+    });
 
-  useEffect(() => {
+    useEffect(() => {
     async function carregarConfiguracoes() {
-      try {
+        try {
         const dados = await obterConfiguracoesTributarias();
+
+        console.log("CONFIGURAÇÕES:", dados);
+
         setConfiguracoes(dados || []);
-      } catch (error) {
+        } catch (error) {
+        console.error(
+            "Erro ao carregar configurações tributárias:",
+            error
+        );
+
         setErro(
-          error.message ||
+            error.message ||
             "Não foi possível carregar as configurações tributárias."
         );
-      }
+        }
     }
 
     carregarConfiguracoes();
-  }, []);
+    }, []);
+
+    useEffect(() => {
+    if (!editando) {
+        return;
+    }
+
+    async function carregarProduto() {
+        try {
+        setErro("");
+
+        const produto = await obterProdutoPorId(id);
+
+        console.log("PRODUTO EDIÇÃO:", produto);
+
+        setForm({
+            codigo: produto.codigo || "",
+            descricao: produto.descricao || "",
+            ncm: produto.ncm || "",
+            unidade: produto.unidade || "UN",
+            valorVenda: produto.valorVenda ?? "",
+            configuracaoTributariaId:
+            produto.configuracaoTributariaId || "",
+        });
+        } catch (error) {
+        console.error(
+            "Erro ao carregar produto para edição:",
+            error
+        );
+
+        setErro(
+            error.message ||
+            "Não foi possível carregar o produto."
+        );
+        }
+    }
+
+    carregarProduto();
+    }, [id, editando]);
+
+    function alterarCampo(event) {
+    const { name, value } = event.target;
+
+    setForm((anterior) => ({
+        ...anterior,
+        [name]: value,
+    }));
+    }
 
   function alterarCampo(event) {
     const { name, value } = event.target;
@@ -80,15 +134,27 @@ export default function NovoProduto() {
         );
       }
 
-      await cadastrarProduto({
-        codigo: form.codigo.trim(),
-        descricao: form.descricao.trim(),
-        ncm: form.ncm.trim(),
-        unidade: form.unidade,
-        valorVenda,
-        configuracaoTributariaId:
-          form.configuracaoTributariaId,
-      });
+    const dadosProduto = {
+    codigo: form.codigo.trim(),
+    descricao: form.descricao.trim(),
+    ncm: form.ncm.trim(),
+    unidade: form.unidade,
+    valorVenda,
+    configuracaoTributariaId:
+        form.configuracaoTributariaId,
+    };
+
+    if (editando) {
+    await alterarProduto(id, dadosProduto);
+    } else {
+    await cadastrarProduto(dadosProduto);
+    }
+
+    navigate(
+    editando
+        ? `/cadastros/produtos/${id}`
+        : "/cadastros/produtos"
+    );
 
       navigate("/cadastros/produtos");
     } catch (error) {
@@ -117,11 +183,15 @@ export default function NovoProduto() {
       <section className="produtos-cabecalho">
         <div>
           <span className="label-azul">CADASTROS</span>
-          <h2>Novo produto</h2>
-          <p>
-            Cadastre as informações comerciais e fiscais
-            do produto.
-          </p>
+            <h2>
+            {editando ? "Editar produto" : "Novo produto"}
+            </h2>
+
+            <p>
+            {editando
+                ? "Altere as informações comerciais e fiscais do produto."
+                : "Cadastre as informações comerciais e fiscais do produto."}
+            </p>
         </div>
       </section>
 
@@ -264,8 +334,10 @@ export default function NovoProduto() {
           >
             <i className="bi bi-check-lg" />
             {salvando
-              ? "Salvando..."
-              : "Salvar produto"}
+            ? "Salvando..."
+            : editando
+                ? "Salvar alterações"
+                : "Salvar produto"}
           </button>
         </div>
       </form>

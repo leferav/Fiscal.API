@@ -134,13 +134,14 @@ export default function Produtos() {
                     </td>
 
                     <td>
-                      <button
+                        <button
                         type="button"
                         className="produto-btn-acao"
                         title="Visualizar produto"
-                      >
+                        onClick={() => navigate(`/cadastros/produtos/${produto.id}`)}
+                        >
                         <i className="bi bi-eye" />
-                      </button>
+                        </button>
                     </td>
                   </tr>
                 ))}

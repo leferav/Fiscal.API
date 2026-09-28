@@ -8,6 +8,7 @@ import {
 
 import Login from "./pages/Login/Login";
 import Produtos from "./pages/Produtos/Produtos";
+import ProdutoDetalhes from "./pages/Produtos/ProdutoDetalhes";
 import NovoProduto from "./pages/Produtos/NovoProduto";
 import EmitirNFCe from "./pages/EmitirNFCe/EmitirNFCe";
 import AppLayout from "./components/layout/AppLayout";
@@ -76,6 +77,16 @@ function App() {
               path="/cadastros/produtos/novo"
               element={<NovoProduto />}
             />
+
+            <Route
+              path="/cadastros/produtos/:id"
+              element={<ProdutoDetalhes />}
+            />
+
+            <Route
+              path="/cadastros/produtos/:id/editar"
+              element={<NovoProduto />}
+            />           
 
           </Route>
         )}
