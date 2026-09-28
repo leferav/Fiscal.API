@@ -1,7 +1,16 @@
 import { useState } from "react";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+} from "react-router-dom";
 
 import Login from "./pages/Login/Login";
 import EmitirNFCe from "./pages/EmitirNFCe/EmitirNFCe";
+import AppLayout from "./components/layout/AppLayout";
+import NotasFiscais from "./pages/NotasFiscais/NotasFiscais";
+import NotaFiscalDetalhes from "./pages/NotasFiscais/NotaFiscalDetalhes";
 
 import {
   estaAutenticado,
@@ -21,18 +30,57 @@ function App() {
     setAutenticado(false);
   }
 
-  if (!autenticado) {
-    return (
-      <Login
-        onLogin={handleLogin}
-      />
-    );
-  }
-
   return (
-    <EmitirNFCe
-      onLogout={handleLogout}
-    />
+    <BrowserRouter>
+      <Routes>
+
+        {/* LOGIN */}
+        <Route
+          path="/login"
+          element={
+            autenticado ? (
+              <Navigate to="/vendas/nfce" replace />
+            ) : (
+              <Login onLogin={handleLogin} />
+            )
+          }
+        />
+
+        {/* ÁREA AUTENTICADA */}
+        {autenticado && (
+          <Route element={<AppLayout onLogout={handleLogout} />}>
+
+            <Route
+              path="/vendas/nfce"
+              element={<EmitirNFCe onLogout={handleLogout} />}
+            />
+
+            <Route
+              path="/fiscal/notas"
+              element={<NotasFiscais />}
+            />
+
+            <Route
+              path="/fiscal/notas/:id"
+              element={<NotaFiscalDetalhes />}
+            />
+
+          </Route>
+        )}
+
+        {/* ROTA PADRÃO */}
+        <Route
+          path="*"
+          element={
+            <Navigate
+              to={autenticado ? "/vendas/nfce" : "/login"}
+              replace
+            />
+          }
+        />
+
+      </Routes>
+    </BrowserRouter>
   );
 }
 

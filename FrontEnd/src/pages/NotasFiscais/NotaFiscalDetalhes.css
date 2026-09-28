@@ -1,0 +1,544 @@
+/* ============================================================
+   DETALHES DA NOTA FISCAL
+============================================================ */
+
+.detalhe-nota-pagina {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+
+/* ============================================================
+   VOLTAR
+============================================================ */
+
+.detalhe-voltar {
+  width: fit-content;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 0;
+
+  color: var(--color-primary);
+  background: transparent;
+
+  border: 0;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.detalhe-voltar:hover {
+  text-decoration: underline;
+}
+
+
+/* ============================================================
+   CABEÇALHO
+============================================================ */
+
+.detalhe-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detalhe-titulo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  margin-top: 3px;
+}
+
+.detalhe-titulo h2 {
+  margin: 0;
+
+  color: var(--color-text-primary);
+
+  font-size: 25px;
+  font-weight: 800;
+}
+
+.detalhe-cabecalho p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  margin: 5px 0 0;
+
+  color: var(--color-text-muted);
+
+  font-size: 11px;
+}
+
+
+/* ============================================================
+   STATUS
+============================================================ */
+
+.detalhe-status {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 6px 10px;
+
+  border-radius: 20px;
+
+  font-size: 9px;
+  font-weight: 800;
+
+  letter-spacing: 0.4px;
+}
+
+.detalhe-status.autorizada {
+  color: #147447;
+  background: #e6f6ee;
+}
+
+.detalhe-status.rejeitada {
+  color: #b02a37;
+  background: #fdecef;
+}
+
+.detalhe-status.outro {
+  color: #6c757d;
+  background: #eef1f4;
+}
+
+
+/* ============================================================
+   CARDS
+============================================================ */
+
+.detalhe-card {
+  padding: 22px;
+}
+
+.detalhe-card-titulo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  margin-bottom: 20px;
+}
+
+.detalhe-card-icone {
+  width: 43px;
+  height: 43px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  color: var(--color-primary);
+  background: #edf6fd;
+
+  border-radius: 9px;
+
+  font-size: 17px;
+}
+
+.detalhe-card-titulo h3 {
+  margin: 1px 0 0;
+
+  color: var(--color-text-primary);
+
+  font-size: 16px;
+  font-weight: 700;
+}
+
+
+/* ============================================================
+   CHAVE DE ACESSO
+============================================================ */
+
+.detalhe-chave {
+  padding: 16px 18px;
+
+  background: #f7fafc;
+
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+
+  margin-bottom: 20px;
+}
+
+.detalhe-chave > span {
+  display: block;
+
+  margin-bottom: 6px;
+
+  color: var(--color-text-muted);
+
+  font-size: 9px;
+  font-weight: 700;
+
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detalhe-chave-conteudo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 15px;
+}
+
+.detalhe-chave-conteudo strong {
+  min-width: 0;
+
+  color: var(--color-text-primary);
+
+  font-size: 12px;
+  font-weight: 600;
+
+  word-break: break-all;
+}
+
+.detalhe-chave-conteudo button {
+  height: 34px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  flex-shrink: 0;
+
+  padding: 0 12px;
+
+  color: var(--color-primary);
+  background: #edf6fd;
+
+  border: 0;
+  border-radius: 7px;
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.detalhe-chave-conteudo button:hover {
+  color: #ffffff;
+  background: var(--color-primary);
+}
+
+
+/* ============================================================
+   INFORMAÇÕES
+============================================================ */
+
+.detalhe-grid-info {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  gap: 1px;
+
+  overflow: hidden;
+
+  background: var(--color-border);
+
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+}
+
+.detalhe-info {
+  min-height: 72px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  padding: 14px 17px;
+
+  background: #ffffff;
+}
+
+.detalhe-info span {
+  margin-bottom: 4px;
+
+  color: var(--color-text-muted);
+
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.detalhe-info strong {
+  color: var(--color-text-primary);
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+
+/* ============================================================
+   VALORES + DATAS
+============================================================ */
+
+.detalhe-duas-colunas {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 20px;
+}
+
+.detalhe-valores {
+  display: flex;
+  flex-direction: column;
+}
+
+.detalhe-valores > div {
+  min-height: 55px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  border-bottom: 1px solid #e5edf4;
+}
+
+.detalhe-valores > div:last-child {
+  border-bottom: 0;
+}
+
+.detalhe-valores span {
+  color: var(--color-text-muted);
+
+  font-size: 11px;
+}
+
+.detalhe-valores strong {
+  color: var(--color-text-primary);
+
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.detalhe-valores .detalhe-total strong {
+  color: var(--color-primary);
+
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.detalhe-datas {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 1px;
+
+  overflow: hidden;
+
+  background: var(--color-border);
+
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+}
+
+
+/* ============================================================
+   RETORNO SEFAZ
+============================================================ */
+
+.detalhe-sefaz {
+  min-height: 82px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 14px;
+
+  padding: 17px 20px;
+}
+
+.detalhe-sefaz-icone {
+  width: 45px;
+  height: 45px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 9px;
+
+  font-size: 20px;
+}
+
+.detalhe-sefaz > div:last-child {
+  display: flex;
+  flex-direction: column;
+
+  gap: 4px;
+}
+
+.detalhe-sefaz span {
+  font-size: 8px;
+  font-weight: 800;
+
+  letter-spacing: 0.7px;
+}
+
+.detalhe-sefaz strong {
+  color: var(--color-text-primary);
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+
+/* ============================================================
+   RETORNO SEFAZ - AUTORIZADA
+============================================================ */
+
+.detalhe-sefaz.sucesso {
+  background: #e8f7ef;
+  border: 1px solid #b7e4ca;
+  border-left: 4px solid #198754;
+}
+
+.detalhe-sefaz.sucesso
+  .detalhe-sefaz-icone {
+  color: #198754;
+  background: #d4f0e0;
+}
+
+.detalhe-sefaz.sucesso span {
+  color: #198754;
+}
+
+.detalhe-sefaz.sucesso strong {
+  color: #146c43;
+}
+
+
+/* ============================================================
+   RETORNO SEFAZ - REJEITADA
+============================================================ */
+
+.detalhe-sefaz.erro {
+  background: #fdebed;
+  border: 1px solid #f5c2c7;
+  border-left: 4px solid #dc3545;
+}
+
+.detalhe-sefaz.erro
+  .detalhe-sefaz-icone {
+  color: #dc3545;
+  background: #f8d7da;
+}
+
+.detalhe-sefaz.erro span {
+  color: #dc3545;
+}
+
+.detalhe-sefaz.erro strong {
+  color: #842029;
+}
+
+
+/* ============================================================
+   AÇÕES
+============================================================ */
+
+.detalhe-acoes {
+  display: flex;
+  justify-content: flex-end;
+
+  gap: 10px;
+}
+
+.detalhe-btn-secundario {
+  min-width: 105px;
+  height: 40px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  padding: 0 15px;
+
+  color: var(--color-primary);
+  background: #ffffff;
+
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.detalhe-btn-secundario:not(:disabled):hover {
+  color: #ffffff;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.detalhe-btn-secundario:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+
+/* ============================================================
+   RESPONSIVO
+============================================================ */
+
+@media (max-width: 900px) {
+
+  .detalhe-grid-info {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .detalhe-duas-colunas {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 576px) {
+
+  .detalhe-titulo {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .detalhe-grid-info {
+    grid-template-columns: 1fr;
+  }
+
+  .detalhe-datas {
+    grid-template-columns: 1fr;
+  }
+
+  .detalhe-chave-conteudo {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .detalhe-acoes {
+    flex-direction: column;
+  }
+
+  .detalhe-btn-secundario {
+    width: 100%;
+  }
+}

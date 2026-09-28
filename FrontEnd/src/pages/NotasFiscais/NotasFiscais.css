@@ -1,0 +1,500 @@
+/* ============================================================
+   NOTAS FISCAIS
+============================================================ */
+
+.notas-pagina {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+
+/* ============================================================
+   CABEÇALHO
+============================================================ */
+
+.notas-cabecalho-pagina {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+}
+
+.notas-cabecalho-pagina h2 {
+  margin: 2px 0 3px;
+
+  color: var(--color-text-primary);
+
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.notas-cabecalho-pagina p {
+  margin: 0;
+
+  color: var(--color-text-muted);
+
+  font-size: 12px;
+}
+
+.notas-btn-atualizar {
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  padding: 0 17px;
+
+  color: var(--color-primary);
+  background: #ffffff;
+
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.notas-btn-atualizar:hover {
+  background: #edf6fd;
+}
+
+.notas-btn-atualizar:disabled {
+  opacity: 0.6;
+}
+
+
+/* ============================================================
+   CARDS RESUMO
+============================================================ */
+
+.notas-resumo {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 16px;
+}
+
+.notas-card-resumo {
+  min-height: 105px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 15px;
+
+  padding: 18px;
+
+  background: #ffffff;
+
+  border: 1px solid var(--color-border);
+  border-radius: 13px;
+
+  box-shadow:
+    0 4px 14px
+    rgba(30, 78, 120, 0.05);
+}
+
+.notas-card-icone {
+  width: 48px;
+  height: 48px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  color: var(--color-primary);
+
+  background: #edf6fd;
+
+  border-radius: 10px;
+
+  font-size: 19px;
+}
+
+.notas-card-resumo > div:last-child {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.notas-card-resumo span {
+  color: var(--color-text-muted);
+
+  font-size: 10px;
+}
+
+.notas-card-resumo strong {
+  margin-top: 4px;
+
+  color: var(--color-text-primary);
+
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.notas-card-resumo.sucesso
+  .notas-card-icone {
+  color: #198754;
+  background: #eaf7f0;
+}
+
+.notas-card-resumo.erro
+  .notas-card-icone {
+  color: var(--color-danger);
+  background: var(--color-danger-light);
+}
+
+.notas-card-resumo.valor strong {
+  color: var(--color-primary);
+}
+
+
+/* ============================================================
+   FILTROS
+============================================================ */
+
+.notas-filtros {
+  padding: 20px 22px;
+}
+
+.notas-filtros-titulo {
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  margin-bottom: 16px;
+}
+
+.notas-filtros-icone {
+  width: 42px;
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: var(--color-primary);
+
+  background: #edf6fd;
+
+  border-radius: 9px;
+
+  font-size: 17px;
+}
+
+.notas-filtros-titulo h3,
+.notas-tabela-cabecalho h3 {
+  margin: 1px 0 0;
+
+  color: var(--color-text-primary);
+
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.notas-filtros-campos {
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+}
+
+.notas-pesquisa {
+  position: relative;
+
+  flex: 1;
+}
+
+.notas-pesquisa i {
+  position: absolute;
+
+  top: 50%;
+  left: 15px;
+
+  color: var(--color-primary);
+
+  transform: translateY(-50%);
+}
+
+.notas-pesquisa .form-control {
+  height: 44px;
+
+  padding-left: 42px;
+
+  border:
+    1px solid
+    var(--color-border);
+
+  border-radius: 8px;
+
+  font-size: 12px;
+
+  box-shadow: none;
+}
+
+.notas-pesquisa .form-control:focus,
+.notas-select:focus {
+  border-color: var(--color-primary);
+
+  box-shadow:
+    0 0 0 3px
+    rgba(8, 106, 187, 0.1);
+}
+
+.notas-select {
+  width: 190px;
+  height: 44px;
+
+  border:
+    1px solid
+    var(--color-border);
+
+  border-radius: 8px;
+
+  font-size: 12px;
+
+  box-shadow: none;
+}
+
+
+/* ============================================================
+   TABELA
+============================================================ */
+
+.notas-card-tabela {
+  overflow: hidden;
+}
+
+.notas-tabela-cabecalho {
+  min-height: 72px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 22px;
+
+  border-bottom:
+    1px solid
+    var(--color-border);
+}
+
+.notas-quantidade {
+  padding: 7px 11px;
+
+  color: var(--color-primary);
+
+  background: #edf6fd;
+
+  border-radius: 7px;
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.notas-tabela thead th {
+  height: 52px;
+
+  padding: 0 22px;
+
+  vertical-align: middle;
+
+  color: var(--color-text-primary);
+
+  background: #f5f9fc;
+
+  border-bottom:
+    1px solid
+    var(--color-border);
+
+  font-size: 9px;
+  font-weight: 800;
+
+  letter-spacing: 0.7px;
+
+  text-transform: uppercase;
+}
+
+.notas-tabela tbody td {
+  height: 66px;
+
+  padding: 10px 22px;
+
+  vertical-align: middle;
+
+  color: var(--color-text-primary);
+
+  border-bottom: 1px solid #e5edf4;
+
+  font-size: 12px;
+}
+
+.notas-tabela tbody tr:hover {
+  background:
+    rgba(238, 246, 252, 0.45);
+}
+
+.notas-numero {
+  color: var(--color-text-primary);
+
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.notas-tabela small {
+  color: var(--color-text-muted);
+
+  font-size: 9px;
+}
+
+.notas-valor {
+  font-weight: 700;
+}
+
+
+/* ============================================================
+   STATUS
+============================================================ */
+
+.notas-status {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 6px 9px;
+
+  border-radius: 20px;
+
+  font-size: 9px;
+  font-weight: 800;
+
+  letter-spacing: 0.3px;
+}
+
+.notas-status.autorizada {
+  color: #147447;
+  background: #e6f6ee;
+}
+
+.notas-status.rejeitada {
+  color: #b02a37;
+  background: #fdecef;
+}
+
+.notas-status.outro {
+  color: #6c757d;
+  background: #eef1f4;
+}
+
+
+/* ============================================================
+   AÇÕES
+============================================================ */
+
+.notas-btn-acao {
+  width: 35px;
+  height: 35px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  color: var(--color-primary);
+  background: #edf6fd;
+
+  border: 0;
+  border-radius: 7px;
+
+  font-size: 14px;
+}
+
+.notas-btn-acao:hover {
+  color: #ffffff;
+  background: var(--color-primary);
+}
+
+
+/* ============================================================
+   MENSAGENS
+============================================================ */
+
+.notas-mensagem {
+  min-height: 160px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  color: var(--color-text-muted);
+
+  font-size: 12px;
+}
+
+.notas-mensagem i {
+  font-size: 25px;
+}
+
+.notas-erro {
+  margin: 20px;
+
+  padding: 14px;
+
+  color: #842029;
+  background: #f8d7da;
+
+  border: 1px solid #f5c2c7;
+  border-radius: 8px;
+
+  font-size: 12px;
+}
+
+
+/* ============================================================
+   RESPONSIVO
+============================================================ */
+
+@media (max-width: 1100px) {
+  .notas-resumo {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 850px) {
+  .notas-filtros-campos {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .notas-select {
+    width: 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .notas-resumo {
+    grid-template-columns: 1fr;
+  }
+
+  .notas-cabecalho-pagina {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .notas-btn-atualizar {
+    width: 100%;
+  }
+}

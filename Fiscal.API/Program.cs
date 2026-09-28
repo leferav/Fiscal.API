@@ -5,8 +5,10 @@ using Fiscal.API.Services.NFe;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using QuestPDF.Infrastructure;
 using System.Text;
 
+QuestPDF.Settings.License = LicenseType.Community;
 var builder = WebApplication.CreateBuilder(args);
 
 // Certificado PFX vindo de variável de ambiente (Koyeb)
@@ -113,6 +115,7 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins(
                 "http://localhost:5173",
+                "http://localhost:5174",
                 "https://fiscal-web-iota.vercel.app"
             )
             .AllowAnyHeader()

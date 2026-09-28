@@ -1,0 +1,83 @@
+.app-body {
+  display: flex;
+  min-height: calc(100vh - 92px);
+  background: #eef7ff;
+}
+
+.sidebar {
+  width: 230px;
+  min-width: 230px;
+  background: #ffffff;
+  border-right: 1px solid #dbe7f2;
+  padding: 24px 14px;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebar-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 18px;
+}
+
+.sidebar-grupo:first-child {
+  margin-top: 0;
+}
+
+.sidebar-titulo {
+  padding: 0 12px;
+  margin-bottom: 5px;
+
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #8ca0b3;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  min-height: 44px;
+  padding: 10px 12px;
+
+  color: #48647d;
+  text-decoration: none;
+
+  border-radius: 8px;
+
+  font-size: 0.92rem;
+  font-weight: 500;
+
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.sidebar-link i {
+  width: 20px;
+  font-size: 1.05rem;
+  text-align: center;
+}
+
+.sidebar-link:hover {
+  background: #eef6fc;
+  color: #0874bd;
+}
+
+.sidebar-link.active {
+  background: #e7f3fc;
+  color: #0874bd;
+  font-weight: 700;
+}
+
+.app-content {
+  flex: 1;
+  min-width: 0;
+}
