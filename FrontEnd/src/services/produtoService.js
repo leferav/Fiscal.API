@@ -94,3 +94,20 @@ export async function alterarProduto(id, produto) {
 
   return dados;
 }
+
+export async function pesquisarNcms(busca) {
+  const { response, dados } =
+    await apiRequestAutenticado(
+      `/api/cadastros/ncms?busca=${encodeURIComponent(busca)}`
+    );
+
+  if (!response.ok) {
+    throw new Error(
+      dados?.mensagem ||
+      dados?.erro ||
+      "Não foi possível pesquisar os NCMs."
+    );
+  }
+
+  return dados;
+}

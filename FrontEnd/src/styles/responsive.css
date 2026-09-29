@@ -1,0 +1,73 @@
+/* ============================================================
+   RESPONSIVIDADE GLOBAL
+============================================================ */
+
+* {
+  box-sizing: border-box;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ============================================================
+   TABLET / MOBILE
+============================================================ */
+
+@media (max-width: 768px) {
+
+  .conteudo {
+    width: 100%;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  /* Formulários reutilizáveis */
+
+  .form-grid-responsivo {
+    grid-template-columns: 1fr !important;
+  }
+
+  .campo-responsivo {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .campo-responsivo input,
+  .campo-responsivo select,
+  .campo-responsivo textarea {
+    width: 100%;
+  }
+
+  /* Autocomplete */
+
+  .autocomplete-resultados {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 240px;
+  }
+
+  .autocomplete-resultados button {
+    width: 100%;
+  }
+
+  /* Botões no rodapé dos formulários */
+
+  .acoes-formulario-responsivo {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .acoes-formulario-responsivo button {
+    width: 100%;
+  }
+
+  /* Tabelas continuam utilizáveis no celular */
+
+  .table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

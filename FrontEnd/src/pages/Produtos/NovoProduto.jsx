@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { cadastrarProduto, alterarProduto, obterConfiguracoesTributarias, obterProdutoPorId, } from "../../services/produtoService";
+import { cadastrarProduto, alterarProduto, obterConfiguracoesTributarias, obterProdutoPorId, pesquisarNcms,} from "../../services/produtoService";
 import "./Produtos.css";
 
 export default function NovoProduto() {
@@ -11,6 +11,10 @@ export default function NovoProduto() {
   const [configuracoes, setConfiguracoes] = useState([]);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
+
+  const [buscaNcm, setBuscaNcm] = useState("");
+  const [resultadosNcm, setResultadosNcm] = useState([]);
+  const [pesquisandoNcm, setPesquisandoNcm] = useState(false);
 
     const [form, setForm] = useState({
     codigo: "",
@@ -99,6 +103,50 @@ export default function NovoProduto() {
       ...anterior,
       [name]: value,
     }));
+  }
+
+  async function alterarBuscaNcm(event) {
+  const valor = event.target.value;
+
+  setBuscaNcm(valor);
+
+  // Se o usuário alterar a pesquisa,
+  // remove o NCM anteriormente selecionado.
+  setForm((anterior) => ({
+    ...anterior,
+    ncm: "",
+  }));
+
+  if (valor.trim().length < 2) {
+    setResultadosNcm([]);
+    return;
+  }
+
+  try {
+    setPesquisandoNcm(true);
+
+    const dados = await pesquisarNcms(valor.trim());
+
+    setResultadosNcm(dados || []);
+  } catch (error) {
+    console.error("Erro ao pesquisar NCM:", error);
+    setResultadosNcm([]);
+  } finally {
+    setPesquisandoNcm(false);
+  }
+}
+
+function selecionarNcm(ncm) {
+    setForm((anterior) => ({
+      ...anterior,
+      ncm: ncm.codigo,
+    }));
+
+    setBuscaNcm(
+      `${ncm.codigo} - ${ncm.descricao}`
+    );
+
+    setResultadosNcm([]);
   }
 
   async function handleSubmit(event) {
@@ -237,15 +285,35 @@ export default function NovoProduto() {
               />
             </div>
 
-            <div className="produto-campo">
+            <div className="produto-campo produto-ncm-campo campo-responsivo">
               <label>NCM *</label>
+
               <input
-                name="ncm"
-                value={form.ncm}
-                onChange={alterarCampo}
-                maxLength={8}
-                placeholder="00000000"
+                type="text"
+                value={buscaNcm}
+                onChange={alterarBuscaNcm}
+                placeholder="Código ou descrição..."
+                autoComplete="off"
               />
+
+              {pesquisandoNcm && (
+                <small>Pesquisando NCM...</small>
+              )}
+
+              {resultadosNcm.length > 0 && (
+                <div className="produto-ncm-resultados autocomplete-resultados">
+                  {resultadosNcm.map((ncm) => (
+                    <button
+                      key={ncm.codigo}
+                      type="button"
+                      onClick={() => selecionarNcm(ncm)}
+                    >
+                      <strong>{ncm.codigo}</strong>
+                      <span>{ncm.descricao}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="produto-campo">

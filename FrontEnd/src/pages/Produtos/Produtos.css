@@ -286,3 +286,66 @@
     width: 100%;
   }
 }
+
+
+/* ============================================================
+   AUTOCOMPLETE NCM
+============================================================ */
+
+.produto-ncm-campo {
+  position: relative;
+}
+
+.produto-ncm-resultados {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+
+  width: 420px;
+  max-width: calc(100vw - 40px);
+  max-height: 280px;
+  overflow-y: auto;
+
+  background: #fff;
+  border: 1px solid #d5e1ee;
+  border-radius: 8px;
+
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+  z-index: 1000;
+}
+
+.produto-ncm-resultados button {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  padding: 10px 12px;
+
+  border: 0;
+  border-bottom: 1px solid #edf2f7;
+
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.produto-ncm-resultados button:last-child {
+  border-bottom: 0;
+}
+
+.produto-ncm-resultados button:hover {
+  background: #f2f8ff;
+}
+
+.produto-ncm-resultados strong {
+  flex-shrink: 0;
+  color: #0b4a8b;
+}
+
+.produto-ncm-resultados span {
+  color: #34495e;
+  line-height: 1.35;
+}
+
