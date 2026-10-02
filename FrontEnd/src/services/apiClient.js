@@ -35,9 +35,6 @@ export async function apiRequest(endpoint,options = {}) {
   };
 }
 
-/* ============================================================
-   REQUISIÇÃO AUTENTICADA
-============================================================ */
 
 export async function apiRequestAutenticado(
   endpoint,

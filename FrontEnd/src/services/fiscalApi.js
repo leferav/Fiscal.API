@@ -8,10 +8,6 @@ import {
 } from "./apiClient";
 
 
-/* ============================================================
-   HEADERS AUTENTICADOS
-============================================================ */
-
 function criarHeaders(
   contentType = true
 ) {

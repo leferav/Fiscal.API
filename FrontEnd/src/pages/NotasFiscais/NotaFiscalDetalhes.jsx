@@ -7,7 +7,6 @@ import "./NotaFiscalDetalhes.css";
 export default function NotaFiscalDetalhes() {
   const { id } = useParams();
   const navigate = useNavigate();
-
   const [nota, setNota] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
@@ -388,7 +387,6 @@ function formatarMoeda(valor) {
     currency: "BRL",
   });
 }
-
 
 function Info({ titulo, valor }) {
   return (

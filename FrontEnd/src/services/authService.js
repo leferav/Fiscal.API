@@ -1,10 +1,6 @@
 import { apiRequest } from "./apiClient";
 
 
-/* ============================================================
-   LOGIN
-============================================================ */
-
 export async function login(email, senha) {
   const { response, dados } =
     await apiRequest(
@@ -33,10 +29,6 @@ export async function login(email, senha) {
   return dados;
 }
 
-
-/* ============================================================
-   SALVAR SESSÃO
-============================================================ */
 
 export function salvarSessao(dados) {
 
@@ -95,10 +87,6 @@ export function salvarSessao(dados) {
 }
 
 
-/* ============================================================
-   TOKEN
-============================================================ */
-
 export function obterToken() {
 
   return localStorage.getItem(
@@ -107,10 +95,6 @@ export function obterToken() {
 
 }
 
-
-/* ============================================================
-   USUÁRIO
-============================================================ */
 
 export function obterUsuario() {
 
@@ -138,10 +122,6 @@ export function obterUsuario() {
 }
 
 
-/* ============================================================
-   EMPRESA
-============================================================ */
-
 export function obterEmpresa() {
 
   const dados =
@@ -168,10 +148,6 @@ export function obterEmpresa() {
 }
 
 
-/* ============================================================
-   ID DA EMPRESA
-============================================================ */
-
 export function obterEmpresaId() {
 
   const empresa =
@@ -183,10 +159,6 @@ export function obterEmpresaId() {
 }
 
 
-/* ============================================================
-   EXPIRAÇÃO
-============================================================ */
-
 export function obterExpiracao() {
 
   return localStorage.getItem(
@@ -195,10 +167,6 @@ export function obterExpiracao() {
 
 }
 
-
-/* ============================================================
-   VERIFICAR SE O TOKEN EXPIROU
-============================================================ */
 
 export function tokenExpirado() {
 
@@ -284,10 +252,6 @@ export function tokenExpirado() {
 }
 
 
-/* ============================================================
-   ESTÁ AUTENTICADO
-============================================================ */
-
 export function estaAutenticado() {
 
   const token =
@@ -312,10 +276,6 @@ export function estaAutenticado() {
 
 }
 
-
-/* ============================================================
-   LOGOUT
-============================================================ */
 
 export function logout() {
 

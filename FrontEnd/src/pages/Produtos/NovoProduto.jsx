@@ -7,94 +7,84 @@ export default function NovoProduto() {
   const navigate = useNavigate();
   const { id } = useParams();
   const editando = Boolean(id);
-
   const [configuracoes, setConfiguracoes] = useState([]);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
-
   const [buscaNcm, setBuscaNcm] = useState("");
   const [resultadosNcm, setResultadosNcm] = useState([]);
   const [pesquisandoNcm, setPesquisandoNcm] = useState(false);
+  const [form, setForm] = useState({ codigo: "", descricao: "", ncm: "", unidade: "UN", valorVenda: "", configuracaoTributariaId: "", });
 
-    const [form, setForm] = useState({
-    codigo: "",
-    descricao: "",
-    ncm: "",
-    unidade: "UN",
-    valorVenda: "",
-    configuracaoTributariaId: "",
-    });
+  useEffect(() => {
+  async function carregarConfiguracoes() {
+      try {
+      const dados = await obterConfiguracoesTributarias();
 
-    useEffect(() => {
-    async function carregarConfiguracoes() {
-        try {
-        const dados = await obterConfiguracoesTributarias();
+      console.log("CONFIGURAÇÕES:", dados);
 
-        console.log("CONFIGURAÇÕES:", dados);
+      setConfiguracoes(dados || []);
+      } catch (error) {
+      console.error(
+          "Erro ao carregar configurações tributárias:",
+          error
+      );
 
-        setConfiguracoes(dados || []);
-        } catch (error) {
-        console.error(
-            "Erro ao carregar configurações tributárias:",
-            error
-        );
+      setErro(
+          error.message ||
+          "Não foi possível carregar as configurações tributárias."
+      );
+      }
+  }
 
-        setErro(
-            error.message ||
-            "Não foi possível carregar as configurações tributárias."
-        );
-        }
-    }
+  carregarConfiguracoes();
+  }, []);
 
-    carregarConfiguracoes();
-    }, []);
+  useEffect(() => {
+  if (!editando) {
+      return;
+  }
 
-    useEffect(() => {
-    if (!editando) {
-        return;
-    }
+  async function carregarProduto() {
+      try {
+      setErro("");
 
-    async function carregarProduto() {
-        try {
-        setErro("");
+      const produto = await obterProdutoPorId(id);
 
-        const produto = await obterProdutoPorId(id);
+      console.log("PRODUTO EDIÇÃO:", produto);
 
-        console.log("PRODUTO EDIÇÃO:", produto);
+      setForm({
+          codigo: produto.codigo || "",
+          descricao: produto.descricao || "",
+          ncm: produto.ncm || "",
+          unidade: produto.unidade || "UN",
+          valorVenda: produto.valorVenda ?? "",
+          configuracaoTributariaId:
+          produto.configuracaoTributariaId || "",
+      });
+      } catch (error) {
+      console.error(
+          "Erro ao carregar produto para edição:",
+          error
+      );
 
-        setForm({
-            codigo: produto.codigo || "",
-            descricao: produto.descricao || "",
-            ncm: produto.ncm || "",
-            unidade: produto.unidade || "UN",
-            valorVenda: produto.valorVenda ?? "",
-            configuracaoTributariaId:
-            produto.configuracaoTributariaId || "",
-        });
-        } catch (error) {
-        console.error(
-            "Erro ao carregar produto para edição:",
-            error
-        );
+      setErro(
+          error.message ||
+          "Não foi possível carregar o produto."
+      );
+      }
+  }
 
-        setErro(
-            error.message ||
-            "Não foi possível carregar o produto."
-        );
-        }
-    }
+  carregarProduto();
+  }, [id, editando]);
 
-    carregarProduto();
-    }, [id, editando]);
+  function alterarCampo(event) {
+  const { name, value } = event.target;
 
-    function alterarCampo(event) {
-    const { name, value } = event.target;
-
-    setForm((anterior) => ({
-        ...anterior,
-        [name]: value,
-    }));
-    }
+  setForm((anterior) => ({
+      ...anterior,
+      [name]: value,
+  }));
+  }
 
   function alterarCampo(event) {
     const { name, value } = event.target;
@@ -134,9 +124,9 @@ export default function NovoProduto() {
   } finally {
     setPesquisandoNcm(false);
   }
-}
+  }
 
-function selecionarNcm(ncm) {
+  function selecionarNcm(ncm) {
     setForm((anterior) => ({
       ...anterior,
       ncm: ncm.codigo,

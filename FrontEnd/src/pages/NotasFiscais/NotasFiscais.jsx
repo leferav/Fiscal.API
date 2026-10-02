@@ -5,11 +5,9 @@ import "./NotasFiscais.css";
 
 export default function NotasFiscais() {
   const navigate = useNavigate();
-
   const [notas, setNotas] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
-
   const [pesquisa, setPesquisa] = useState("");
   const [status, setStatus] = useState("TODOS");
   const [modelo, setModelo] = useState("TODOS");

@@ -1,17 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  obterProdutosPorEmpresa,
-  autorizarNFCe,
-} from "../../services/fiscalApi";
-import {
-  obterEmpresaId,
-} from "../../services/authService";
+import { obterProdutosPorEmpresa, autorizarNFCe,} from "../../services/fiscalApi";
+import { obterEmpresaId, } from "../../services/authService";
 import "./EmitirNFCe.css";
 
 export default function EmitirNFCe({ onLogout }) {
-  /* ============================================================
-     ESTADOS
-  ============================================================ */
   const [busca, setBusca] = useState("");
   const [itens, setItens] = useState([]);
   const [cpfConsumidor, setCpfConsumidor] = useState("");
@@ -21,12 +13,7 @@ export default function EmitirNFCe({ onLogout }) {
   const [emitindo, setEmitindo] = useState(false);
   const [resultadoEmissao, setResultadoEmissao] = useState(null);
   const [erroEmissao, setErroEmissao] = useState("");
-
   const inputBuscaRef = useRef(null);
-
-  /* ============================================================
-     SESSÃO
-  ============================================================ */
   const empresaId = obterEmpresaId();
 
   /* ============================================================
