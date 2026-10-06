@@ -9,6 +9,17 @@
   --color-danger-dark: #e34452;
   --color-danger-light: #fff3f4;
 
+  --color-success: #16a34a;
+  --color-success-dark: #15803d;
+  --color-success-light: #ecfdf3;
+
+  /* Cabeçalhos */
+  --color-header-start: #075da7;
+  --color-header-middle: #0878d1;
+  --color-header-end: #1593df;
+  --color-header-text: #ffffff;
+  --color-header-muted: #bfe4ff;
+
   /* Textos */
   --color-text-primary: #092f67;
   --color-text-secondary: #557392;

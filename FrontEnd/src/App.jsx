@@ -1,11 +1,5 @@
 import { useState } from "react";
-import {
-  BrowserRouter,
-  Navigate,
-  Route,
-  Routes,
-} from "react-router-dom";
-
+import { BrowserRouter, Navigate, Route, Routes,} from "react-router-dom";
 import Login from "./pages/Login/Login";
 import Produtos from "./pages/Produtos/Produtos";
 import ProdutoDetalhes from "./pages/Produtos/ProdutoDetalhes";
@@ -14,11 +8,10 @@ import EmitirNFCe from "./pages/EmitirNFCe/EmitirNFCe";
 import AppLayout from "./components/layout/AppLayout";
 import NotasFiscais from "./pages/NotasFiscais/NotasFiscais";
 import NotaFiscalDetalhes from "./pages/NotasFiscais/NotaFiscalDetalhes";
-
-import {
-  estaAutenticado,
-  logout,
-} from "./services/authService";
+import Vendas from "./pages/Vendas/Vendas";
+import Dashboard from "./pages/Dashboard/Dashboard";
+import Empresa from "./pages/Empresa/Empresa";
+import { estaAutenticado, logout, } from "./services/authService";
 
 function App() {
   const [autenticado, setAutenticado] =
@@ -53,40 +46,25 @@ function App() {
         {autenticado && (
           <Route element={<AppLayout onLogout={handleLogout} />}>
 
-            <Route
-              path="/vendas/nfce"
-              element={<EmitirNFCe onLogout={handleLogout} />}
-            />
+            <Route path="/dashboard" element={<Dashboard />} />
 
-            <Route
-              path="/fiscal/notas"
-              element={<NotasFiscais />}
-            />
+            <Route path="/vendas" element={<Vendas />}  />  
 
-            <Route
-              path="/fiscal/notas/:id"
-              element={<NotaFiscalDetalhes />}
-            />
+            <Route path="/vendas/nfce" element={<EmitirNFCe onLogout={handleLogout} />}/>
 
-            <Route
-              path="/cadastros/produtos"
-              element={<Produtos />}
-            />
+            <Route path="/fiscal/notas" element={<NotasFiscais />} />
 
-            <Route
-              path="/cadastros/produtos/novo"
-              element={<NovoProduto />}
-            />
+            <Route path="/fiscal/notas/:id" element={<NotaFiscalDetalhes />} />
 
-            <Route
-              path="/cadastros/produtos/:id"
-              element={<ProdutoDetalhes />}
-            />
+            <Route path="/cadastros/produtos" element={<Produtos />} />
 
-            <Route
-              path="/cadastros/produtos/:id/editar"
-              element={<NovoProduto />}
-            />           
+            <Route path="/cadastros/produtos/novo" element={<NovoProduto />} />
+
+            <Route path="/cadastros/produtos/:id" element={<ProdutoDetalhes />} />
+
+            <Route path="/cadastros/produtos/:id/editar" element={<NovoProduto />} />
+
+            <Route path="/cadastros/empresa" element={<Empresa />} />
 
           </Route>
         )}

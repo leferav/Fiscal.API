@@ -36,6 +36,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddHttpClient<NcmService>();
+builder.Services.AddHttpClient();
 
 // ============================================================
 // JWT / AUTENTICAÇÃO

@@ -1,0 +1,329 @@
+.empresa-pagina {
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+/* CABEÇALHO */
+
+.empresa-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.empresa-cabecalho h1 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.empresa-cabecalho p {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+/* CARDS */
+
+.empresa-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 22px;
+  margin-bottom: 20px;
+}
+
+.empresa-card-titulo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 18px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.empresa-card-icone {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 19px;
+}
+
+.empresa-card-titulo h2 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.empresa-card-titulo p {
+  margin: 4px 0 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+/* FORMULÁRIO */
+
+.empresa-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.empresa-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.empresa-coluna-2 {
+  grid-column: span 2;
+}
+
+.empresa-campo label {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.empresa-campo input,
+.empresa-campo select {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  box-sizing: border-box;
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+
+  background: #fff;
+  color: var(--color-text-primary);
+
+  font-family: var(--font-family);
+  font-size: 14px;
+
+  outline: none;
+
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.empresa-campo input:focus,
+.empresa-campo select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(8, 106, 187, 0.1);
+}
+
+.empresa-campo input:hover,
+.empresa-campo select:hover {
+  border-color: #aac6dc;
+}
+
+/* CONFIGURAÇÃO FISCAL */
+
+.empresa-fiscal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.empresa-fiscal-item {
+  min-height: 74px;
+  padding: 14px 16px;
+  box-sizing: border-box;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+
+  background: var(--color-primary-light);
+}
+
+.empresa-fiscal-item span {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.empresa-fiscal-item strong {
+  color: var(--color-text-primary);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.empresa-sem-configuracao {
+  padding: 18px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  background: #fafcfe;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+/* MENSAGENS */
+
+.empresa-mensagem {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  padding: 12px 14px;
+  margin-bottom: 18px;
+
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.empresa-mensagem-erro {
+  background: var(--color-danger-light);
+  border: 1px solid #fecdd3;
+  color: var(--color-danger-dark);
+}
+
+.empresa-mensagem-sucesso {
+  background: var(--color-success-light);
+  border: 1px solid #bbf7d0;
+  color: var(--color-success-dark);
+}
+
+/* AÇÕES */
+
+.empresa-acoes {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: 24px;
+}
+
+.empresa-salvar {
+  min-width: 180px;
+  height: 44px;
+  padding: 0 20px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  border: 1px solid var(--color-success);
+  border-radius: var(--radius-sm);
+
+  background: var(--color-success-light);
+  color: var(--color-success);
+
+  font-family: var(--font-family);
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.empresa-salvar:hover:not(:disabled) {
+  background: var(--color-success);
+  color: #fff;
+}
+
+.empresa-salvar:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* CARREGAMENTO */
+
+.empresa-carregando {
+  min-height: 250px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.empresa-carregando i,
+.empresa-salvar:disabled i {
+  animation: empresa-girar 0.8s linear infinite;
+}
+
+@keyframes empresa-girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* RESPONSIVO */
+
+@media (max-width: 1000px) {
+  .empresa-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .empresa-fiscal-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .empresa-pagina {
+    padding: 16px;
+  }
+
+  .empresa-grid,
+  .empresa-fiscal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .empresa-coluna-2 {
+    grid-column: span 1;
+  }
+
+  .empresa-card {
+    padding: 16px;
+  }
+
+  .empresa-acoes {
+    display: block;
+  }
+
+  .empresa-salvar {
+    width: 100%;
+  }
+}
+
+.empresa-consultando {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.empresa-consultando i {
+  animation: empresa-girar 0.8s linear infinite;
+}

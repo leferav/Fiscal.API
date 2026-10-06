@@ -1,13 +1,15 @@
 ﻿using Fiscal.API.Data;
 using Fiscal.API.Models.Database;
 using Fiscal.API.Models.Requests.Cadastros;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Fiscal.API.Controllers.Cadastros;
 
 [ApiController]
-[Route("api/cadastros/[controller]")]
+[Authorize]
+[Route("api/cadastros/empresas")]
 public class EmpresasController : ControllerBase
 {
     private readonly FiscalDbContext _context;
@@ -17,109 +19,245 @@ public class EmpresasController : ControllerBase
         _context = context;
     }
 
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<Empresa>>> Get()
-    {
-        var empresas = await _context.Empresas
-            .AsNoTracking()
-            .OrderBy(x => x.RazaoSocial)
-            .ToListAsync();
+    /* ============================================================
+       EMPRESA DA SESSÃO
+       ============================================================ */
 
-        return Ok(empresas);
+    private bool TentarObterEmpresaId(out Guid empresaId)
+    {
+        empresaId = Guid.Empty;
+
+        var empresaIdClaim =
+            User.FindFirst("empresaId")?.Value;
+
+        if (string.IsNullOrWhiteSpace(empresaIdClaim))
+            return false;
+
+        return Guid.TryParse(
+            empresaIdClaim,
+            out empresaId
+        );
     }
 
-    [HttpGet("{id:guid}")]
-    public async Task<ActionResult<Empresa>> GetById(Guid id)
+    /* ============================================================
+       GET - MINHA EMPRESA
+       GET /api/cadastros/empresas/minha
+       ============================================================ */
+
+    [HttpGet("minha")]
+    public async Task<IActionResult> ObterMinhaEmpresa()
     {
+        if (!TentarObterEmpresaId(out var empresaId))
+        {
+            return Unauthorized(new
+            {
+                mensagem =
+                    "Empresa não identificada no token."
+            });
+        }
+
         var empresa = await _context.Empresas
             .AsNoTracking()
-            .Include(x => x.ConfiguracaoFiscal)
-            .FirstOrDefaultAsync(x => x.Id == id);
+            .Where(x =>
+                x.Id == empresaId &&
+                x.Ativo)
+            .Select(x => new
+            {
+                x.Id,
+                x.Cnpj,
+                x.RazaoSocial,
+                x.NomeFantasia,
+                x.InscricaoEstadual,
 
-        if (empresa is null)
-            return NotFound();
+                x.Logradouro,
+                x.Numero,
+                x.Bairro,
+
+                x.CodigoMunicipio,
+                x.Municipio,
+                x.Uf,
+                x.Cep,
+
+                x.Crt,
+                x.Ativo,
+                x.CriadoEm,
+
+                ConfiguracaoFiscal =
+                    x.ConfiguracaoFiscal == null
+                        ? null
+                        : new
+                        {
+                            x.ConfiguracaoFiscal.Id,
+                            x.ConfiguracaoFiscal.Ambiente,
+                            x.ConfiguracaoFiscal.SerieNFCe,
+                            x.ConfiguracaoFiscal.ProximoNumeroNFCe
+                        }
+            })
+            .FirstOrDefaultAsync();
+
+        if (empresa == null)
+        {
+            return NotFound(new
+            {
+                mensagem =
+                    "Empresa não encontrada ou inativa."
+            });
+        }
 
         return Ok(empresa);
     }
 
-    [HttpPost]
-    public async Task<ActionResult<Empresa>> Post(CadastrarEmpresaRequest request)
+    /* ============================================================
+       PUT - MINHA EMPRESA
+       PUT /api/cadastros/empresas/minha
+       ============================================================ */
+
+    [HttpPut("minha")]
+    public async Task<IActionResult> AtualizarMinhaEmpresa(
+        [FromBody] CadastrarEmpresaRequest request)
     {
-        var cnpjExistente = await _context.Empresas
-            .AnyAsync(x => x.Cnpj == request.Cnpj);
-
-        if (cnpjExistente)
-            return Conflict("Já existe uma empresa cadastrada com este CNPJ.");
-
-        var empresa = new Empresa
+        if (!TentarObterEmpresaId(out var empresaId))
         {
-            Id = Guid.NewGuid(),
+            return Unauthorized(new
+            {
+                mensagem =
+                    "Empresa não identificada no token."
+            });
+        }
 
-            Cnpj = request.Cnpj,
-            RazaoSocial = request.RazaoSocial,
-            NomeFantasia = request.NomeFantasia,
-            InscricaoEstadual = request.InscricaoEstadual,
-
-            Logradouro = request.Logradouro,
-            Numero = request.Numero,
-            Bairro = request.Bairro,
-            CodigoMunicipio = request.CodigoMunicipio,
-            Municipio = request.Municipio,
-            Uf = request.Uf,
-            Cep = request.Cep,
-            Crt = request.Crt,
-
-            Ativo = true,
-            CriadoEm = DateTime.UtcNow
-        };
-
-        _context.Empresas.Add(empresa);
-
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(
-            nameof(GetById),
-            new { id = empresa.Id },
-            empresa);
-    }
-
-    [HttpPut("{id:guid}")]
-    public async Task<IActionResult> Atualizar(Guid id, [FromBody] CadastrarEmpresaRequest request)
-    {
         var empresa = await _context.Empresas
-            .FirstOrDefaultAsync(x => x.Id == id);
+            .FirstOrDefaultAsync(x =>
+                x.Id == empresaId &&
+                x.Ativo);
 
-        if (empresa is null)
+        if (empresa == null)
+        {
             return NotFound(new
             {
-                mensagem = "Empresa não encontrada."
+                mensagem =
+                    "Empresa não encontrada ou inativa."
             });
+        }
 
-        var cnpjExistente = await _context.Empresas
-            .AnyAsync(x => x.Cnpj == request.Cnpj && x.Id != id);
+        /* --------------------------------------------------------
+           VALIDAÇÃO CNPJ
+           -------------------------------------------------------- */
 
-        if (cnpjExistente)
+        if (string.IsNullOrWhiteSpace(request.Cnpj))
+        {
             return BadRequest(new
             {
-                mensagem = "Já existe outra empresa cadastrada com este CNPJ."
+                mensagem = "Informe o CNPJ."
             });
+        }
 
-        empresa.Cnpj = request.Cnpj;
-        empresa.RazaoSocial = request.RazaoSocial;
-        empresa.NomeFantasia = request.NomeFantasia;
-        empresa.InscricaoEstadual = request.InscricaoEstadual;
+        if (string.IsNullOrWhiteSpace(
+            request.RazaoSocial))
+        {
+            return BadRequest(new
+            {
+                mensagem =
+                    "Informe a razão social."
+            });
+        }
 
-        empresa.Logradouro = request.Logradouro;
-        empresa.Numero = request.Numero;
-        empresa.Bairro = request.Bairro;
-        empresa.CodigoMunicipio = request.CodigoMunicipio;
-        empresa.Municipio = request.Municipio;
-        empresa.Uf = request.Uf;
-        empresa.Cep = request.Cep;
+        var cnpj = new string(
+            request.Cnpj
+                .Where(char.IsDigit)
+                .ToArray()
+        );
+
+        var cnpjExistente =
+            await _context.Empresas.AnyAsync(x =>
+                x.Cnpj == cnpj &&
+                x.Id != empresaId);
+
+        if (cnpjExistente)
+        {
+            return BadRequest(new
+            {
+                mensagem =
+                    "Já existe outra empresa cadastrada com este CNPJ."
+            });
+        }
+
+        /* --------------------------------------------------------
+           ATUALIZAÇÃO
+           -------------------------------------------------------- */
+
+        empresa.Cnpj = cnpj;
+
+        empresa.RazaoSocial =
+            request.RazaoSocial.Trim();
+
+        empresa.NomeFantasia =
+            string.IsNullOrWhiteSpace(
+                request.NomeFantasia)
+                ? null
+                : request.NomeFantasia.Trim();
+
+        empresa.InscricaoEstadual =
+            string.IsNullOrWhiteSpace(
+                request.InscricaoEstadual)
+                ? null
+                : request.InscricaoEstadual.Trim();
+
+        empresa.Logradouro =
+            request.Logradouro?.Trim()
+            ?? string.Empty;
+
+        empresa.Numero =
+            request.Numero?.Trim()
+            ?? string.Empty;
+
+        empresa.Bairro =
+            request.Bairro?.Trim()
+            ?? string.Empty;
+
+        empresa.CodigoMunicipio =
+            request.CodigoMunicipio;
+
+        empresa.Municipio =
+            request.Municipio?.Trim()
+            ?? string.Empty;
+
+        empresa.Uf =
+            request.Uf?.Trim().ToUpper()
+            ?? string.Empty;
+
+        empresa.Cep = new string(
+            (request.Cep ?? string.Empty)
+                .Where(char.IsDigit)
+                .ToArray()
+        );
+
         empresa.Crt = request.Crt;
 
         await _context.SaveChangesAsync();
 
-        return Ok(empresa);
+        /* --------------------------------------------------------
+           RETORNO
+           -------------------------------------------------------- */
+
+        return Ok(new
+        {
+            empresa.Id,
+            empresa.Cnpj,
+            empresa.RazaoSocial,
+            empresa.NomeFantasia,
+            empresa.InscricaoEstadual,
+
+            empresa.Logradouro,
+            empresa.Numero,
+            empresa.Bairro,
+
+            empresa.CodigoMunicipio,
+            empresa.Municipio,
+            empresa.Uf,
+            empresa.Cep,
+
+            empresa.Crt,
+            empresa.Ativo
+        });
     }
 }

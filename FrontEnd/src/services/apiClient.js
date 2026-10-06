@@ -35,7 +35,6 @@ export async function apiRequest(endpoint,options = {}) {
   };
 }
 
-
 export async function apiRequestAutenticado(
   endpoint,
   options = {}
@@ -70,7 +69,6 @@ export async function apiRequestAutenticado(
 
   return resultado;
 }
-
 
 export async function apiDownloadAutenticado(
   endpoint,

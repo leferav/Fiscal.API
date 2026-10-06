@@ -43,3 +43,108 @@ select,
 textarea {
   outline: none;
 }
+
+/* =========================================================
+   BOTÕES GLOBAIS
+   ========================================================= */
+
+.btn-primary,
+.btn-success,
+.btn-danger {
+  min-height: 42px;
+  padding: 0 18px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+/* Primário */
+
+.btn-primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+}
+
+/* Sucesso */
+
+.btn-success {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: #fff;
+}
+
+.btn-success:hover:not(:disabled) {
+  background: var(--color-success-dark);
+  border-color: var(--color-success-dark);
+}
+
+/* Perigo */
+
+.btn-danger {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  color: #fff;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--color-danger-dark);
+  border-color: var(--color-danger-dark);
+}
+
+/* Desabilitado */
+
+.btn-primary:disabled,
+.btn-success:disabled,
+.btn-danger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+
+/* =========================================================
+   CABEÇALHO GLOBAL
+   ========================================================= */
+
+.header-gradient {
+  background: linear-gradient(
+    135deg,
+    var(--color-header-start) 0%,
+    var(--color-header-middle) 55%,
+    var(--color-header-end) 100%
+  );
+
+  color: var(--color-header-text);
+}
+
+.header-gradient h1,
+.header-gradient h2,
+.header-gradient h3 {
+  color: var(--color-header-text);
+}
+
+.header-gradient .header-subtitle {
+  color: var(--color-header-muted);
+}

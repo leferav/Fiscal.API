@@ -1,0 +1,339 @@
+.dashboard-pagina {
+  padding: 28px;
+  min-height: 100%;
+
+  background: linear-gradient(
+    135deg,
+    #eaf4fd 0%,
+    #f4f9fd 55%,
+    #e8f3fc 100%
+  );
+}
+
+/* =========================================================
+   CABEÇALHO
+   ========================================================= */
+
+.dashboard-cabecalho {
+  margin-bottom: 22px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.dashboard-cabecalho > div > span {
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.dashboard-cabecalho h2 {
+  margin: 4px 0 6px;
+
+  color: var(--color-text-primary);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.dashboard-cabecalho p {
+  margin: 0;
+
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+/* =========================================================
+   NOVA VENDA
+   ========================================================= */
+
+.dashboard-nova-venda {
+  height: 44px;
+  padding: 0 20px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  border: 1px solid var(--color-success);
+  border-radius: var(--radius-sm);
+
+  background: var(--color-success-light);
+  color: var(--color-success);
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.dashboard-nova-venda:hover {
+  background: var(--color-success);
+  color: #fff;
+}
+
+/* =========================================================
+   CARDS
+   ========================================================= */
+
+.dashboard-cards {
+  margin-bottom: 22px;
+
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.dashboard-card {
+  min-height: 120px;
+  padding: 20px;
+
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+
+  background: var(--color-surface);
+
+  box-shadow: var(--shadow-card);
+}
+
+.dashboard-card-icone {
+  width: 48px;
+  height: 48px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+
+  font-size: 21px;
+}
+
+.dashboard-card-icone.azul {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.dashboard-card-icone.verde {
+  background: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.dashboard-card-icone.vermelho {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+}
+
+.dashboard-card > div:last-child {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-card span {
+  margin-bottom: 4px;
+
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dashboard-card strong {
+  color: var(--color-text-primary);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.dashboard-card small {
+  margin-top: 3px;
+
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+/* =========================================================
+   ÚLTIMAS NFC-e
+   ========================================================= */
+
+.dashboard-notas {
+  overflow: hidden;
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+
+  background: var(--color-surface);
+
+  box-shadow: var(--shadow-card);
+}
+
+.dashboard-painel-titulo {
+  min-height: 70px;
+  padding: 16px 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+
+  background: linear-gradient(
+    135deg,
+    var(--color-header-start) 0%,
+    var(--color-header-middle) 55%,
+    var(--color-header-end) 100%
+  );
+}
+
+.dashboard-painel-titulo span {
+  display: block;
+
+  color: var(--color-header-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.dashboard-painel-titulo h3 {
+  margin: 3px 0 0;
+
+  color: #fff;
+  font-size: 18px;
+}
+
+.dashboard-painel-titulo button {
+  height: 38px;
+  padding: 0 14px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 7px;
+
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.dashboard-painel-titulo button:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* =========================================================
+   TABELA
+   ========================================================= */
+
+.dashboard-tabela {
+  overflow-x: auto;
+}
+
+.dashboard-tabela table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dashboard-tabela th {
+  padding: 13px 20px;
+
+  border-bottom: 1px solid var(--color-border-light);
+
+  background: #f8fbfe;
+
+  color: var(--color-text-secondary);
+
+  font-size: 11px;
+  font-weight: 700;
+
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.dashboard-tabela td {
+  padding: 14px 20px;
+
+  border-bottom: 1px solid var(--color-border-light);
+
+  color: var(--color-text-primary);
+  font-size: 13px;
+}
+
+/* =========================================================
+   SEM NOTAS
+   ========================================================= */
+
+.dashboard-vazio {
+  min-height: 180px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.dashboard-vazio i {
+  margin-bottom: 10px;
+
+  color: var(--color-primary);
+  font-size: 32px;
+}
+
+.dashboard-vazio strong {
+  margin-bottom: 5px;
+
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.dashboard-vazio span {
+  font-size: 12px;
+}
+
+/* =========================================================
+   RESPONSIVIDADE
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .dashboard-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-pagina {
+    padding: 16px;
+  }
+
+  .dashboard-cabecalho {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dashboard-nova-venda {
+    width: 100%;
+  }
+
+  .dashboard-cards {
+    grid-template-columns: 1fr;
+  }
+}

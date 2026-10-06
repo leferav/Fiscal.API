@@ -5,7 +5,12 @@ export default function Sidebar() {
     <aside className="sidebar">
       <nav className="sidebar-nav">
 
-        <NavLink to="/dashboard" className="sidebar-link">
+        <NavLink
+          to="/dashboard"
+          className={({ isActive }) =>
+            `sidebar-link${isActive ? " active" : ""}`
+          }
+        >
           <i className="bi bi-grid" />
           <span>Dashboard</span>
         </NavLink>
@@ -13,7 +18,23 @@ export default function Sidebar() {
         <div className="sidebar-grupo">
           <span className="sidebar-titulo">VENDAS</span>
 
-          <NavLink to="/vendas/nfce" className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
+          <NavLink
+            to="/vendas"
+            end
+            className={({ isActive }) =>
+              `sidebar-link${isActive ? " active" : ""}`
+            }
+          >
+            <i className="bi bi-cart3" />
+            <span>Vendas</span>
+          </NavLink>
+
+          <NavLink
+            to="/vendas/nfce"
+            className={({ isActive }) =>
+              `sidebar-link${isActive ? " active" : ""}`
+            }
+          >
             <i className="bi bi-receipt" />
             <span>Emitir NFC-e</span>
           </NavLink>
@@ -22,7 +43,12 @@ export default function Sidebar() {
         <div className="sidebar-grupo">
           <span className="sidebar-titulo">FISCAL</span>
 
-          <NavLink to="/fiscal/notas" className="sidebar-link">
+          <NavLink
+            to="/fiscal/notas"
+            className={({ isActive }) =>
+              `sidebar-link${isActive ? " active" : ""}`
+            }
+          >
             <i className="bi bi-file-earmark-text" />
             <span>Notas Fiscais</span>
           </NavLink>
@@ -31,21 +57,36 @@ export default function Sidebar() {
         <div className="sidebar-grupo">
           <span className="sidebar-titulo">CADASTROS</span>
 
-          <NavLink to="/cadastros/produtos" className="sidebar-link">
+          <NavLink
+            to="/cadastros/produtos"
+            className={({ isActive }) =>
+              `sidebar-link${isActive ? " active" : ""}`
+            }
+          >
             <i className="bi bi-box-seam" />
             <span>Produtos</span>
           </NavLink>
 
-          <NavLink to="/cadastros/clientes" className="sidebar-link">
+          <NavLink
+            to="/cadastros/empresa"
+            className={({ isActive }) =>
+              `sidebar-link${isActive ? " active" : ""}`
+            }
+          >
             <i className="bi bi-people" />
-            <span>Clientes</span>
+            <span>Empresa</span>
           </NavLink>
         </div>
 
         <div className="sidebar-grupo">
           <span className="sidebar-titulo">SISTEMA</span>
 
-          <NavLink to="/configuracoes" className="sidebar-link">
+          <NavLink
+            to="/configuracoes"
+            className={({ isActive }) =>
+              `sidebar-link${isActive ? " active" : ""}`
+            }
+          >
             <i className="bi bi-gear" />
             <span>Configurações</span>
           </NavLink>

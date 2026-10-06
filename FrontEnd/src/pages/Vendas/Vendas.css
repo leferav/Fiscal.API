@@ -1,0 +1,791 @@
+/* =========================================================
+   PÁGINA E CABEÇALHO
+   ========================================================= */
+
+.vendas-pagina {
+  padding: 28px;
+  min-height: 100%;
+  background: linear-gradient(
+      135deg,
+      #eaf4fd 0%,
+      #f4f9fd 55%,
+      #e8f3fc 100%
+    );
+}
+
+.vendas-cabecalho {
+  margin-bottom: 22px;
+}
+
+.vendas-cabecalho > div > span {
+  color: #0878d1;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.vendas-cabecalho h2 {
+  margin: 4px 0 6px;
+  color: #0b3475;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.vendas-cabecalho p {
+  margin: 0;
+  color: #6c7d93;
+  font-size: 14px;
+}
+
+/* =========================================================
+   ESTRUTURA DO PDV
+   ========================================================= */
+
+.vendas-pdv {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(380px, 0.9fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.vendas-produtos,
+.vendas-carrinho {
+  background: #fff;
+  border: 1px solid #cdddeb;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(22, 74, 120, 0.08);
+}
+
+.vendas-produtos {
+  min-height: 610px;
+  background: #f8fbfe;
+}
+
+.vendas-carrinho {
+  min-height: 610px;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+}
+
+.vendas-produtos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  padding: 2px 20px 20px;
+}
+
+.vendas-carrinho-vazio {
+  flex: 1;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  color: #8da0b5;
+  text-align: center;
+}
+
+.vendas-carrinho-vazio > i {
+  margin-bottom: 14px;
+  color: #a3b5c7;
+  font-size: 38px;
+}
+
+.vendas-carrinho-vazio strong {
+  margin-bottom: 6px;
+  color: #526b84;
+  font-size: 14px;
+}
+
+.vendas-carrinho-vazio span {
+  font-size: 12px;
+}
+
+.vendas-carrinho-itens {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.vendas-carrinho-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px 12px;
+  padding: 10px 20px;
+  border-bottom: 1px solid #e8eef5;
+  background: #ffffff;
+  transition: background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.vendas-carrinho-item:hover {
+  background: #f3f9fe;
+  box-shadow: inset 4px 0 0 #1683d8;
+}
+
+/* =========================================================
+   CABEÇALHO DOS PAINÉIS
+   ========================================================= */
+
+.vendas-painel-titulo {
+  min-height: 70px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 0;
+  background: linear-gradient(
+      135deg,
+      #075da7 0%,
+      #0878d1 55%,
+      #1593df 100%
+    );
+}
+
+.vendas-painel-titulo span {
+  display: block;
+  color: #bfe4ff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.vendas-painel-titulo h3 {
+  margin: 3px 0 0;
+  color: #ffffff;
+  font-size: 18px;
+}
+
+.vendas-contador {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+/* =========================================================
+   PESQUISA DE PRODUTOS
+   ========================================================= */
+
+.vendas-pesquisa {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 20px;
+  padding: 0 14px;
+  height: 46px;
+  border: 1px solid #d3dfeb;
+  border-radius: 8px;
+  background: #ffffff;
+  border-color: #cbdbea;
+  box-shadow: 0 3px 10px rgba(25, 76, 120, 0.05);
+}
+
+.vendas-pesquisa i {
+  color: #0878d1;
+  font-size: 16px;
+}
+
+.vendas-pesquisa input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #334155;
+  font-size: 14px;
+}
+
+.vendas-pesquisa input::placeholder {
+  color: #9aa9ba;
+}
+
+.vendas-pesquisa:focus-within {
+  border-color: #1683d8;
+  box-shadow: 0 0 0 3px rgba(22, 131, 216, 0.09),
+    0 4px 12px rgba(25, 76, 120, 0.07);
+}
+
+/* =========================================================
+   CARDS DE PRODUTOS
+   ========================================================= */
+
+.vendas-produto-card {
+  min-height: 145px;
+  padding: 16px;
+  border: 1px solid #d7e2ed;
+  border-radius: 10px;
+  background: linear-gradient(
+      145deg,
+      #ffffff 0%,
+      #f5faff 100%
+    );
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  text-align: left;
+  transition: border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+  border-color: #cfdeeb;
+  box-shadow: 0 3px 8px rgba(30, 80, 120, 0.05);
+}
+
+.vendas-produto-card:hover {
+  border-color: #1683d8;
+  box-shadow: 0 10px 22px rgba(20, 105, 170, 0.15);
+  transform: translateY(-3px);
+}
+
+.vendas-produto-icone {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: linear-gradient(
+      135deg,
+      #e3f3ff,
+      #d5ecff
+    );
+  color: #0878d1;
+  font-size: 18px;
+  border: 1px solid #c7e3f8;
+}
+
+.vendas-produto-info {
+  width: 100%;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.vendas-produto-info small {
+  color: #8a9bae;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.vendas-produto-info strong {
+  color: #29445f;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.vendas-produto-info span {
+  margin-top: 4px;
+  color: #0574c9;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* =========================================================
+   MENSAGENS
+   ========================================================= */
+
+.vendas-mensagem {
+  padding: 50px 20px;
+  color: #8294a8;
+  text-align: center;
+}
+
+.vendas-erro {
+  margin-bottom: 18px;
+  padding: 12px 16px;
+  border: 1px solid #f1b8bd;
+  border-radius: 8px;
+  background: #fff1f2;
+  color: #b4232d;
+  font-size: 13px;
+}
+
+.finalizar-erro {
+  color: var(--color-danger);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* =========================================================
+   TOTAL DA VENDA
+   ========================================================= */
+
+.vendas-total {
+  padding: 20px;
+  border-top: 1px solid #cfe0ee;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  background: linear-gradient(
+      135deg,
+      #f3f9fe 0%,
+      #e8f4fd 100%
+    );
+}
+
+.vendas-total span {
+  color: #526d87;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.vendas-total strong {
+  color: #086fc1;
+  font-size: 28px;
+  font-weight: 700;
+  text-shadow: 0 1px 0 #ffffff;
+}
+
+/* =========================================================
+   BOTÃO FINALIZAR VENDA
+   ========================================================= */
+
+.vendas-acoes .vendas-finalizar {
+  flex: 1;
+
+  border: 1px solid var(--color-success);
+  border-radius: var(--radius-sm);
+
+  background: var(--color-success-light);
+  color: var(--color-success);
+
+  font-size: 13px;
+  font-weight: 600;
+
+  box-shadow: none;
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.vendas-acoes .vendas-finalizar:hover:not(:disabled) {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: #fff;
+
+  box-shadow: none;
+  transform: none;
+}
+
+.vendas-acoes .vendas-finalizar:disabled {
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+  color: var(--color-success);
+
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   ITENS DO CARRINHO
+   ========================================================= */
+
+.vendas-item-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vendas-item-info small {
+  color: #8a9bae;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.vendas-item-info strong {
+  color: #29445f;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vendas-item-info span {
+  color: #718399;
+  font-size: 12px;
+}
+
+.vendas-item-controles {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vendas-item-controles button {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d5e0eb;
+  border-radius: 6px;
+  background: #fff;
+  color: #0878d1;
+  cursor: pointer;
+}
+
+.vendas-item-controles button:hover {
+  border-color: #1683d8;
+  background: #edf7ff;
+}
+
+.vendas-item-controles > strong {
+  min-width: 24px;
+  color: #29445f;
+  font-size: 13px;
+  text-align: center;
+}
+
+.vendas-item-controles .vendas-item-excluir {
+  margin-left: 4px;
+  color: #dc3545;
+}
+
+.vendas-item-controles .vendas-item-excluir:hover {
+  border-color: #f1b8bd;
+  background: #fff1f2;
+}
+
+.vendas-item-subtotal {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  color: #0574c9;
+  font-size: 15px;
+  font-weight: 700;
+  margin-top: 0;
+  line-height: 1;
+  transform: translateY(-3px);
+}
+
+/* =========================================================
+   RESPONSIVIDADE
+   ========================================================= */
+
+@media (max-width: 1200px) {
+  .vendas-produtos-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 950px) {
+  .vendas-pdv {
+    grid-template-columns: 1fr;
+  }
+
+  .vendas-carrinho {
+    min-height: 450px;
+  }
+}
+@media (max-width: 600px) {
+  .vendas-pagina {
+    padding: 16px;
+  }
+
+  .vendas-produtos-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* =========================================================
+   MODAL - FINALIZAR VENDA
+   ========================================================= */
+
+.finalizar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(15, 35, 55, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.finalizar-modal {
+  width: 100%;
+  max-width: 520px;
+
+  overflow: hidden;
+
+  border: 1px solid #c8d9e8;
+  border-radius: 12px;
+
+  background: #fff;
+
+  box-shadow:
+    0 20px 60px rgba(7, 48, 84, 0.25);
+}
+
+.finalizar-cabecalho {
+  padding: 18px 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.finalizar-cabecalho span {
+  color: #bfe4ff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.finalizar-cabecalho h2 {
+  margin: 3px 0 0;
+
+  color: #fff;
+  font-size: 20px;
+}
+
+.finalizar-fechar {
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid var(--color-danger);
+  border-radius: 7px;
+
+  background: var(--color-danger);
+  color: #fff;
+
+  cursor: pointer;
+
+  transition: background 0.15s ease;
+}
+
+.finalizar-fechar:hover {
+  background: var(--color-danger-dark);
+  border-color: var(--color-danger-dark);
+}
+
+.finalizar-conteudo {
+  padding: 22px;
+}
+
+.finalizar-resumo {
+  margin-bottom: 22px;
+  padding: 16px;
+
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+
+  border: 1px solid #d5e5f1;
+  border-radius: 9px;
+
+  background: #f1f8fd;
+}
+
+.finalizar-resumo > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.finalizar-resumo span {
+  color: #718399;
+  font-size: 11px;
+}
+
+.finalizar-resumo strong {
+  color: #0878d1;
+  font-size: 20px;
+}
+
+.finalizar-campo {
+  margin-bottom: 18px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.finalizar-campo label {
+  color: #40556d;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.finalizar-campo select,
+.finalizar-campo input {
+  width: 100%;
+  height: 43px;
+
+  padding: 0 12px;
+
+  border: 1px solid #cedce9;
+  border-radius: 7px;
+
+  background: #fff;
+  color: #334155;
+
+  font-size: 14px;
+  outline: none;
+}
+
+.finalizar-campo select:focus,
+.finalizar-campo input:focus {
+  border-color: #1683d8;
+
+  box-shadow:
+    0 0 0 3px rgba(22, 131, 216, 0.09);
+}
+
+.finalizar-campo small {
+  color: #8a9bae;
+  font-size: 11px;
+}
+
+.finalizar-acoes {
+  padding: 16px 22px;
+
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+
+  border-top: 1px solid #e2eaf2;
+
+  background: #f8fbfe;
+}
+
+
+.finalizar-acoes {
+  flex-wrap: wrap;
+}
+
+.finalizar-erro-emissao {
+  width: 100%;
+  padding: 10px 12px;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+
+  background: var(--color-danger-light);
+  color: var(--color-danger-dark);
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* =========================================================
+   AÇÕES DA VENDA
+   ========================================================= */
+
+.vendas-acoes {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  padding: 0 20px 20px;
+    background: linear-gradient(
+    135deg,
+    #f3f9fe 0%,
+    #e8f4fd 100%
+  );
+}
+
+/* Os dois botões terão exatamente a mesma altura */
+.vendas-acoes .vendas-limpar,
+.vendas-acoes .vendas-finalizar {
+  height: 52px;
+  min-height: 52px;
+  margin: 0;
+  padding: 0 20px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  box-sizing: border-box;
+}
+
+/* Limpar = 40% */
+.vendas-acoes .vendas-limpar {
+  flex: 0 0 40%;
+
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.vendas-acoes .vendas-limpar:hover:not(:disabled) {
+  background: var(--color-danger);
+  color: #fff;
+}
+
+/* Finalizar ocupa o restante */
+.vendas-acoes .vendas-finalizar {
+  flex: 1;
+}
+
+/* Desabilitados */
+.vendas-acoes .vendas-limpar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   RESPONSIVIDADE DOS BOTÕES
+   ========================================================= */
+
+@media (max-width: 700px) {
+  .vendas-acoes {
+    flex-direction: column;
+  }
+
+  .vendas-acoes .vendas-limpar,
+  .vendas-acoes .vendas-finalizar {
+    width: 100%;
+    flex: none;
+  }
+}
