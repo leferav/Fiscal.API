@@ -11,6 +11,7 @@ public class FiscalDbContext : DbContext
     public DbSet<Empresa> Empresas => Set<Empresa>();
     public DbSet<ConfiguracaoFiscal> ConfiguracoesFiscais => Set<ConfiguracaoFiscal>();
     public DbSet<NotaFiscal> NotasFiscais => Set<NotaFiscal>();
+    public DbSet<SolicitacaoEmissao> SolicitacoesEmissao => Set<SolicitacaoEmissao>();
     public DbSet<ConfiguracaoTributaria> ConfiguracoesTributarias => Set<ConfiguracaoTributaria>();
     public DbSet<Produto> Produtos => Set<Produto>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
@@ -29,6 +30,7 @@ public class FiscalDbContext : DbContext
         ConfigurarAgenteFiscal(modelBuilder);
         ConfigurarVinculacaoAgenteFiscal(modelBuilder);
         ConfigurarNotaFiscal(modelBuilder);
+        ConfigurarSolicitacaoEmissao(modelBuilder);
         ConfigurarConfiguracaoTributaria(modelBuilder);
         ConfigurarProduto(modelBuilder);
         ConfigurarNcm(modelBuilder);    
@@ -221,6 +223,68 @@ public class FiscalDbContext : DbContext
         entity.HasOne(x => x.Empresa)
             .WithMany(x => x.NotasFiscais)
             .HasForeignKey(x => x.EmpresaId);
+    }
+
+    private static void ConfigurarSolicitacaoEmissao(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<SolicitacaoEmissao>();
+
+        entity.ToTable("solicitacoes_emissao");
+
+        entity.HasKey(x => x.Id);
+
+        entity.Property(x => x.Status)
+            .HasMaxLength(30)
+            .IsRequired();
+
+        entity.Property(x => x.PayloadJson)
+            .HasColumnType("jsonb")
+            .IsRequired();
+
+        entity.Property(x => x.ChaveAcesso)
+            .HasMaxLength(44);
+
+        entity.Property(x => x.Protocolo)
+            .HasMaxLength(30);
+
+        entity.Property(x => x.XMotivo)
+            .HasMaxLength(500);
+
+        entity.Property(x => x.Erro)
+            .HasColumnType("text");
+
+        entity.Property(x => x.XmlAutorizado)
+            .HasColumnType("text");
+
+        entity.HasIndex(x => new
+        {
+            x.EmpresaId,
+            x.Status,
+            x.CriadoEm
+        });
+
+        entity.HasIndex(x => x.AgenteId);
+
+        entity.HasIndex(x => x.NotaFiscalId);
+
+        entity.HasIndex(x => new
+        {
+            x.EmpresaId,
+            x.Ambiente,
+            x.Modelo,
+            x.Serie,
+            x.Numero
+        }).IsUnique();
+
+        entity.HasOne<Empresa>()
+            .WithMany()
+            .HasForeignKey(x => x.EmpresaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne<AgenteFiscal>()
+            .WithMany()
+            .HasForeignKey(x => x.AgenteId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigurarConfiguracaoTributaria(ModelBuilder modelBuilder)

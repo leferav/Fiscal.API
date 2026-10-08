@@ -3,6 +3,7 @@ using System;
 using Fiscal.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Fiscal.API.Migrations
 {
     [DbContext(typeof(FiscalDbContext))]
-    partial class FiscalDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261008192354_CriarFilaEmissaoNFCe")]
+    partial class CriarFilaEmissaoNFCe
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -502,9 +505,6 @@ namespace Fiscal.API.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
-                    b.Property<DateTime?>("ReservaExpiraEm")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<int>("Serie")
                         .HasColumnType("integer");
 
@@ -512,9 +512,6 @@ namespace Fiscal.API.Migrations
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
-
-                    b.Property<Guid?>("TentativaId")
-                        .HasColumnType("uuid");
 
                     b.Property<string>("XMotivo")
                         .HasMaxLength(500)

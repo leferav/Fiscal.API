@@ -1,6 +1,7 @@
 using Fiscal.Agent.Services.Api;
 using Fiscal.Agent.Services.CertificadoDigital;
 using Fiscal.Agent.Services.Configuracao;
+using Fiscal.Agent.Services.Emissao;
 
 namespace Fiscal.Agent;
 
@@ -10,17 +11,20 @@ public class Worker : BackgroundService
     private readonly CertificadoService _certificadoService;
     private readonly ConfiguracaoLocalService _configuracaoLocalService;
     private readonly FiscalApiClient _fiscalApiClient;
+    private readonly ProcessadorEmissaoService _processadorEmissaoService;
 
     public Worker(
         ILogger<Worker> logger,
         CertificadoService certificadoService,
         ConfiguracaoLocalService configuracaoLocalService,
-        FiscalApiClient fiscalApiClient)
+        FiscalApiClient fiscalApiClient,
+        ProcessadorEmissaoService processadorEmissaoService)
     {
         _logger = logger;
         _certificadoService = certificadoService;
         _configuracaoLocalService = configuracaoLocalService;
         _fiscalApiClient = fiscalApiClient;
+        _processadorEmissaoService = processadorEmissaoService;
     }
 
     protected override async Task ExecuteAsync(
@@ -180,8 +184,42 @@ public class Worker : BackgroundService
 
             Console.WriteLine();
             Console.WriteLine();
+            // Sincroniza os metadados uma vez na inicialização.
+            // Falhas não impedem o heartbeat.
+            try
+            {
+                var configuracaoAtual = _configuracaoLocalService.Carregar();
+                if (configuracaoAtual?.AgenteId is not Guid agenteId ||
+                    agenteId == Guid.Empty ||
+                    string.IsNullOrWhiteSpace(configuracaoAtual.CredencialAgenteProtegida))
+                {
+                    throw new InvalidOperationException("Agent não vinculado.");
+                }
+
+                var credencial = _configuracaoLocalService.DesprotegerCredencialAgente(
+                    configuracaoAtual.CredencialAgenteProtegida);
+
+                await _fiscalApiClient.SincronizarCertificadoAsync(
+                    agenteId, credencial, certificado, stoppingToken);
+
+                Console.WriteLine("Metadados do certificado sincronizados com sucesso.");
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Falha ao sincronizar certificado: {Mensagem}", ex.Message);
+            }
+
             Console.WriteLine("Fiscal.Agent aguardando solicitações...");
             Console.WriteLine("Heartbeat automático iniciado.");
+
+            _logger.LogInformation(
+                "Processador de emissão registrado. " +
+                "Consulta automática da fila desabilitada. " +
+                "Transmissão à SEFAZ desabilitada.");
 
             while (!stoppingToken.IsCancellationRequested)
             {

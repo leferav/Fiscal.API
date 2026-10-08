@@ -6,6 +6,11 @@ using Fiscal.Agent.Services.Configuracao;
 
 var builder = Host.CreateApplicationBuilder(args);
 
+builder.Services.AddWindowsService(options =>
+{
+    options.ServiceName = "Fiscal.AgentCertificado";
+});
+
 builder.Services.AddSingleton<CertificadoService>();
 builder.Services.AddSingleton<ConfiguracaoLocalService>();
 

@@ -38,7 +38,8 @@ namespace Fiscal.API.Services.NFCe
             List<ItemFiscal> itensFiscais,
             Empresa empresa,
             ConfiguracaoFiscal configuracaoFiscal,
-            DestinatarioRequest? destinatario = null)
+            DestinatarioRequest? destinatario = null,
+            int? numeroReservado = null)
         {
             var nfce = new global::NFe.Classes.NFe
             {
@@ -52,8 +53,8 @@ namespace Fiscal.API.Services.NFCe
             MontarIdentificacao(
                 nfce,
                 empresa,
-                configuracaoFiscal
-            );
+                configuracaoFiscal,
+                numeroReservado);
 
             // Emitente
             nfce.infNFe.emit =
@@ -145,7 +146,8 @@ namespace Fiscal.API.Services.NFCe
         private void MontarIdentificacao(
             global::NFe.Classes.NFe nfce,
             Empresa empresa,
-            ConfiguracaoFiscal configuracaoFiscal)
+            ConfiguracaoFiscal configuracaoFiscal,
+            int? numeroReservado)
         {
             // ========================================================
             // UF da empresa
@@ -173,8 +175,9 @@ namespace Fiscal.API.Services.NFCe
             // Numeração fiscal
             // ========================================================
 
-            var numeroNFCe =
-                configuracaoFiscal.ProximoNumeroNFCe;
+            var numeroNFCe = numeroReservado.HasValue
+                ? numeroReservado.Value
+                : configuracaoFiscal.ProximoNumeroNFCe;
 
             var serie =
                 configuracaoFiscal.SerieNFCe;

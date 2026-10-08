@@ -3,6 +3,7 @@ import { obterMinhaConfiguracaoFiscal, atualizarMinhaConfiguracaoFiscal, } from 
 import { obterConfiguracoesTributarias, cadastrarConfiguracaoTributaria, atualizarConfiguracaoTributaria, desativarConfiguracaoTributaria} from "../../services/configuracaoTributariaService";
 import ConfiguracaoTributariaModal from "./ConfiguracaoTributariaModal";
 import FiscalAgent from "./FiscalAgent";
+import CertificadoDigital from "./CertificadoDigital";
 import "./Configuracoes.css";
 
 const formularioInicial = {
@@ -564,6 +565,9 @@ export default function Configuracoes() {
 
         {/* FISCAL.AGENT */}
         <FiscalAgent />
+
+        {/* CERTIFICADO DIGITAL */}
+        <CertificadoDigital />
 
 
         {/* CONFIGURAÇÕES TRIBUTÁRIAS */}
