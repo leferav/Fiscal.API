@@ -31,6 +31,8 @@ public class Empresa
 
     public ConfiguracaoFiscal? ConfiguracaoFiscal { get; set; }
 
+    public CertificadoDigital? CertificadoDigital { get; set; }
+
     public ICollection<NotaFiscal> NotasFiscais { get; set; } = new List<NotaFiscal>();
 
     public ICollection<ConfiguracaoTributaria> ConfiguracoesTributarias { get; set; } = new List<ConfiguracaoTributaria>();
@@ -38,4 +40,8 @@ public class Empresa
     public ICollection<Produto> Produtos { get; set; } = new List<Produto>();
 
     public ICollection<Usuario> Usuarios { get; set; } = new List<Usuario>();
+
+    public ICollection<AgenteFiscal> AgentesFiscais { get; set; } = new List<AgenteFiscal>();
+
+    public ICollection<VinculacaoAgenteFiscal> VinculacoesAgentesFiscais { get; set; } = new List<VinculacaoAgenteFiscal>();
 }

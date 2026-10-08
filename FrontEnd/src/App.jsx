@@ -12,6 +12,7 @@ import Vendas from "./pages/Vendas/Vendas";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import Empresa from "./pages/Empresa/Empresa";
 import { estaAutenticado, logout, } from "./services/authService";
+import Configuracoes from "./pages/Configuracoes/Configuracoes";
 
 function App() {
   const [autenticado, setAutenticado] =
@@ -65,6 +66,8 @@ function App() {
             <Route path="/cadastros/produtos/:id/editar" element={<NovoProduto />} />
 
             <Route path="/cadastros/empresa" element={<Empresa />} />
+
+            <Route path="/configuracoes" element={<Configuracoes />} />
 
           </Route>
         )}

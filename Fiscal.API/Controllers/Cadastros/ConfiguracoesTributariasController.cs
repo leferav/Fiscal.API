@@ -85,20 +85,12 @@ namespace Fiscal.API.Controllers.Cadastros
                 });
             }
 
-            if (string.IsNullOrWhiteSpace(request.Nome))
-            {
-                return BadRequest(new
-                {
-                    erro = "Informe o nome da configuração tributária."
-                });
-            }
+            var erroValidacao =
+                ValidarConfiguracaoTributaria(request);
 
-            if (string.IsNullOrWhiteSpace(request.Cfop))
+            if (erroValidacao is not null)
             {
-                return BadRequest(new
-                {
-                    erro = "Informe o CFOP."
-                });
+                return erroValidacao;
             }
 
             var configuracao =
@@ -134,5 +126,201 @@ namespace Fiscal.API.Controllers.Cadastros
 
             return Ok(configuracao);
         }
+
+        [HttpPut("{id:guid}")]
+        public async Task<IActionResult> Atualizar(Guid id, [FromBody] CadastrarConfiguracaoTributariaRequest request)
+        {
+            var empresaIdClaim =
+                User.FindFirst("empresaId")?.Value;
+
+            if (string.IsNullOrWhiteSpace(empresaIdClaim) ||
+                !Guid.TryParse(empresaIdClaim, out var empresaId))
+            {
+                return Unauthorized(new
+                {
+                    mensagem = "Empresa não identificada no token."
+                });
+            }
+
+            var configuracao =
+                await _context.ConfiguracoesTributarias
+                    .FirstOrDefaultAsync(x =>
+                        x.Id == id &&
+                        x.EmpresaId == empresaId &&
+                        x.Ativo);
+
+            if (configuracao is null)
+            {
+                return NotFound(new
+                {
+                    mensagem =
+                        "Configuração tributária não encontrada."
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Nome))
+            {
+                return BadRequest(new
+                {
+                    mensagem =
+                        "Informe o nome da configuração tributária."
+                });
+            }
+
+            var erroValidacao =
+                ValidarConfiguracaoTributaria(request);
+
+            if (erroValidacao is not null)  
+            {
+                return erroValidacao;
+            }
+
+            configuracao.Nome =
+                request.Nome.Trim();
+
+            configuracao.Cfop =
+                request.Cfop.Trim();
+
+            configuracao.CstIcms =
+                request.CstIcms?.Trim();
+
+            configuracao.Csosn =
+                request.Csosn?.Trim();
+
+            configuracao.AliquotaIcms =
+                request.AliquotaIcms;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                configuracao.Id,
+                configuracao.Nome,
+                configuracao.Cfop,
+                configuracao.CstIcms,
+                configuracao.Csosn,
+                configuracao.AliquotaIcms,
+                configuracao.Ativo
+            });
+        }
+
+        [HttpDelete("{id:guid}")]
+        public async Task<IActionResult> Excluir(Guid id)
+        {
+            var empresaIdClaim =
+                User.FindFirst("empresaId")?.Value;
+
+            if (string.IsNullOrWhiteSpace(empresaIdClaim) ||
+                !Guid.TryParse(empresaIdClaim, out var empresaId))
+            {
+                return Unauthorized(new
+                {
+                    mensagem = "Empresa não identificada no token."
+                });
+            }
+
+            var configuracao =
+                await _context.ConfiguracoesTributarias
+                    .FirstOrDefaultAsync(x =>
+                        x.Id == id &&
+                        x.EmpresaId == empresaId &&
+                        x.Ativo);
+
+            if (configuracao is null)
+            {
+                return NotFound(new
+                {
+                    mensagem =
+                        "Configuração tributária não encontrada."
+                });
+            }
+
+            var utilizadaPorProduto = await _context.Produtos.AnyAsync(x =>
+            x.EmpresaId == empresaId &&
+            x.ConfiguracaoTributariaId == id &&
+            x.Ativo);
+
+            if (utilizadaPorProduto)
+            {
+                return BadRequest(new
+                {
+                    mensagem =
+                        "Esta configuração tributária está sendo utilizada por produtos ativos e não pode ser desativada."
+                });
+            }
+
+            configuracao.Ativo = false;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                mensagem =
+                    "Configuração tributária desativada com sucesso."
+            });
+        }
+
+
+        private IActionResult? ValidarConfiguracaoTributaria(CadastrarConfiguracaoTributariaRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Nome))
+            {
+                return BadRequest(new
+                {
+                    mensagem = "Informe o nome da configuração tributária."
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Cfop) ||
+                request.Cfop.Trim().Length != 4 ||
+                !request.Cfop.Trim().All(char.IsDigit))
+            {
+                return BadRequest(new
+                {
+                    mensagem = "O CFOP deve possuir exatamente 4 números."
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.CstIcms))
+            {
+                var cst = request.CstIcms.Trim();
+
+                if (cst.Length != 2 || !cst.All(char.IsDigit))
+                {
+                    return BadRequest(new
+                    {
+                        mensagem =
+                            "O CST ICMS deve possuir exatamente 2 números."
+                    });
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Csosn))
+            {
+                var csosn = request.Csosn.Trim();
+
+                if (csosn.Length != 3 || !csosn.All(char.IsDigit))
+                {
+                    return BadRequest(new
+                    {
+                        mensagem =
+                            "O CSOSN deve possuir exatamente 3 números."
+                    });
+                }
+            }
+
+            if (request.AliquotaIcms < 0 ||
+                request.AliquotaIcms > 100)
+            {
+                return BadRequest(new
+                {
+                    mensagem =
+                        "A alíquota ICMS deve estar entre 0 e 100."
+                });
+            }
+
+            return null;
+        }
     }
+
 }
