@@ -304,7 +304,112 @@ public class AgentesFiscaisController : ControllerBase
 
         return Ok(agentes);
     }
+
+
+    [AllowAnonymous]
+    [HttpPost("{agenteId:guid}/certificado")]
+    public async Task<IActionResult> SincronizarCertificado(
+        Guid agenteId,
+        [FromBody] SincronizarCertificadoAgenteRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Credencial))
+            return Unauthorized(new
+            {
+                mensagem = "Credencial do agente não informada."
+            });
+
+        var agente = await _context.AgentesFiscais
+            .FirstOrDefaultAsync(x =>
+                x.Id == agenteId && x.Ativo);
+
+        if (agente is null)
+            return Unauthorized(new
+            {
+                mensagem = "Agente não encontrado ou inativo."
+            });
+
+        var hashRecebido = Convert.FromHexString(
+            GerarHash(request.Credencial));
+
+        byte[] hashArmazenado;
+
+        try
+        {
+            hashArmazenado = Convert.FromHexString(
+                agente.CredencialHash);
+        }
+        catch (FormatException)
+        {
+            return Unauthorized(new
+            {
+                mensagem = "Credencial do agente inválida."
+            });
+        }
+
+        if (hashRecebido.Length != hashArmazenado.Length ||
+            !CryptographicOperations.FixedTimeEquals(
+                hashRecebido, hashArmazenado))
+        {
+            return Unauthorized(new
+            {
+                mensagem = "Credencial do agente inválida."
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Thumbprint) ||
+            request.ValidoDe == null ||
+            request.ValidoAte == null ||
+            request.ValidoAte <= request.ValidoDe)
+        {
+            return BadRequest(new
+            {
+                mensagem = "Metadados do certificado inválidos."
+            });
+        }
+
+        var certificado = await _context.CertificadosDigitais
+            .FirstOrDefaultAsync(x =>
+                x.EmpresaId == agente.EmpresaId);
+
+        var agora = DateTime.UtcNow;
+
+        if (certificado is null)
+        {
+            certificado = new CertificadoDigital
+            {
+                Id = Guid.NewGuid(),
+                EmpresaId = agente.EmpresaId,
+                CriadoEm = agora
+            };
+
+            _context.CertificadosDigitais.Add(certificado);
+        }
+
+        certificado.TipoArmazenamento =
+            Fiscal.API.Models.Enums.TipoArmazenamentoCertificado.Local;
+
+        certificado.Titular = request.Titular?.Trim();
+        certificado.Cnpj = request.Cnpj?.Trim();
+        certificado.Emissor = request.Emissor?.Trim();
+        certificado.Thumbprint = request.Thumbprint.Trim();
+        certificado.ValidoDe = request.ValidoDe;
+        certificado.ValidoAte = request.ValidoAte;
+        certificado.Ativo = true;
+        certificado.AtualizadoEm = agora;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            mensagem = "Metadados do certificado sincronizados com sucesso.",
+            certificado.Id,
+            certificado.EmpresaId,
+            certificado.AtualizadoEm
+        });
+    }
+
 }
+
 
 public class VincularAgenteRequest
 {
@@ -316,8 +421,19 @@ public class VincularAgenteRequest
 }
 
 
-
 public class HeartbeatAgenteRequest
 {
     public string Credencial { get; set; } = string.Empty;
+}
+
+
+public class SincronizarCertificadoAgenteRequest
+{
+    public string Credencial { get; set; } = string.Empty;
+    public string? Titular { get; set; }
+    public string? Cnpj { get; set; }
+    public string? Emissor { get; set; }
+    public string? Thumbprint { get; set; }
+    public DateTime? ValidoDe { get; set; }
+    public DateTime? ValidoAte { get; set; }
 }
