@@ -1,4 +1,4 @@
-﻿using DFe.Classes.Flags;
+using DFe.Classes.Flags;
 using Fiscal.API.Data;
 using Fiscal.API.Models.Database;
 using Fiscal.API.Models.NFe;
@@ -155,8 +155,20 @@ namespace Fiscal.API.Services
 
         #region NFC-e
 
-        public async Task<object> AutorizarNFCeAsync(EmitirNFeRequest request)
+        public async Task<object> AutorizarNFCeAsync(EmitirNFeRequest request, bool usarAgent = false)
         {
+            // O fluxo atual permanece inalterado quando usarAgent = false.
+            // No novo fluxo, serializa a reserva da numeracao por empresa.
+            await using var transacaoAgent = usarAgent
+                ? await _context.Database.BeginTransactionAsync()
+                : null;
+
+            if (usarAgent)
+            {
+                await _context.Database.ExecuteSqlInterpolatedAsync(
+                    $"SELECT pg_advisory_xact_lock(hashtext({request.EmpresaId.ToString()}))");
+            }
+
             var empresa = await _context.Empresas
                 .Include(x => x.ConfiguracaoFiscal)
                 .Include(x => x.ConfiguracoesTributarias)
@@ -276,6 +288,47 @@ namespace Fiscal.API.Services
                     request.Destinatario
                 );
 
+
+            if (usarAgent)
+            {
+                // Nao assina, nao gera QR Code e nao transmite no Render.
+                // O Agent fara essas operacoes com o certificado local.
+                var xmlPendente = nfce.ObterXmlString();
+                var agora = DateTime.UtcNow;
+
+                var notaPendente = new NotaFiscal
+                {
+                    Id = Guid.NewGuid(),
+                    EmpresaId = empresa.Id,
+                    Modelo = 65,
+                    Serie = nfce.infNFe.ide.serie,
+                    Numero = nfce.infNFe.ide.nNF,
+                    Ambiente = (short)configuracaoFiscal.Ambiente,
+                    Status = "PENDENTE_AGENT",
+                    ValorProdutos = nfce.infNFe.total.ICMSTot.vProd,
+                    ValorTotal = nfce.infNFe.total.ICMSTot.vNF,
+                    XmlEnvio = xmlPendente,
+                    CriadoEm = agora,
+                    AtualizadoEm = agora
+                };
+
+                _context.NotasFiscais.Add(notaPendente);
+                // Reserva o numero antes de entregar a solicitacao ao Agent.
+                configuracaoFiscal.ProximoNumeroNFCe++;
+                await _context.SaveChangesAsync();
+                await transacaoAgent!.CommitAsync();
+
+                return new
+                {
+                    sucesso = true,
+                    pendente = true,
+                    mensagem = "NFC-e aguardando emissao pelo Fiscal.Agent.",
+                    solicitacaoId = notaPendente.Id,
+                    numero = notaPendente.Numero,
+                    serie = notaPendente.Serie,
+                    status = notaPendente.Status
+                };
+            }
 
             var configuracao = _configFactory.Criar();
 

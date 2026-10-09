@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
+using System.Net;
 
 namespace Fiscal.Agent.Services.Api;
 
@@ -37,7 +38,7 @@ public class FiscalApiClient
                     cancellationToken);
 
             throw new Exception(
-                $"Não foi possível vincular o Fiscal.Agent. " +
+                $"NÃ£o foi possÃ­vel vincular o Fiscal.Agent. " +
                 $"HTTP {(int)response.StatusCode}: {conteudo}");
         }
 
@@ -51,7 +52,7 @@ public class FiscalApiClient
             string.IsNullOrWhiteSpace(resultado.Credencial))
         {
             throw new Exception(
-                "A Fiscal.API retornou uma resposta de vinculação inválida.");
+                "A Fiscal.API retornou uma resposta de vinculaÃ§Ã£o invÃ¡lida.");
         }
 
         return resultado;
@@ -78,6 +79,44 @@ public class FiscalApiClient
                 $"Erro ao enviar heartbeat. HTTP {(int)response.StatusCode}");
         }
     }
+    public async Task<SolicitacaoEmissaoAgent?> BuscarEmissaoPendenteAsync(
+        Guid agenteId, string credencial, CancellationToken ct = default)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get, $"api/agentes/{agenteId}/emissoes/pendente");
+        request.Headers.Add("X-Agent-Credential", credencial);
+        using var response = await _httpClient.SendAsync(request, ct);
+        if (response.StatusCode == HttpStatusCode.NoContent) return null;
+        if (!response.IsSuccessStatusCode)
+        {
+            var detalhe = await response.Content.ReadAsStringAsync(ct);
+
+            throw new Exception(
+                $"Erro ao buscar NFC-e pendente. " +
+                $"HTTP {(int)response.StatusCode}: {detalhe}");
+        }
+        return await response.Content.ReadFromJsonAsync<SolicitacaoEmissaoAgent>(
+            cancellationToken: ct);
+    }
+
+    public async Task EnviarResultadoEmissaoAsync(
+        Guid agenteId, string credencial, Guid solicitacaoId,
+        ResultadoEmissaoAgent resultado, CancellationToken ct = default)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post, $"api/agentes/{agenteId}/emissoes/{solicitacaoId}/resultado");
+        request.Headers.Add("X-Agent-Credential", credencial);
+        request.Content = JsonContent.Create(resultado);
+        using var response = await _httpClient.SendAsync(request, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            var detalhe = await response.Content.ReadAsStringAsync(ct);
+
+            throw new Exception(
+                $"HTTP {(int)response.StatusCode}: {detalhe}");
+        }
+    }
+
 }
 
 public class VincularAgenteResponse
@@ -87,4 +126,28 @@ public class VincularAgenteResponse
     public string Credencial { get; set; } = string.Empty;
 
     public string? Mensagem { get; set; }
+}
+
+public class SolicitacaoEmissaoAgent
+{
+    public Guid Id { get; set; }
+    public Guid EmpresaId { get; set; }
+    public int Modelo { get; set; }
+    public int Serie { get; set; }
+    public long Numero { get; set; }
+    public string Xml { get; set; } = string.Empty;
+    public string CscId { get; set; } = string.Empty;
+    public string Csc { get; set; } = string.Empty;
+}
+
+public class ResultadoEmissaoAgent
+{
+    public bool Sucesso { get; set; }
+    public int? CStat { get; set; }
+    public string? Motivo { get; set; }
+    public string? ChaveAcesso { get; set; }
+    public string? Protocolo { get; set; }
+    public string? XmlEnvio { get; set; }
+    public string? XmlRetorno { get; set; }
+    public string? XmlAutorizado { get; set; }
 }

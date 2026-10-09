@@ -6,9 +6,7 @@ namespace Fiscal.Agent.Services.CertificadoDigital;
 
 public class CertificadoService
 {
-    public CertificadoInfo LerCertificado(
-        string caminhoPfx,
-        string senha)
+    public CertificadoInfo LerCertificado( string caminhoPfx, string senha)
     {
         if (string.IsNullOrWhiteSpace(caminhoPfx))
         {
@@ -60,8 +58,33 @@ public class CertificadoService
         };
     }
 
-    private static string? ExtrairCnpj(
-        string subject)
+    public X509Certificate2 ObterCertificado( string caminhoPfx, string senha)
+    {
+        if (string.IsNullOrWhiteSpace(caminhoPfx))
+            throw new ArgumentException(
+                "Caminho do certificado não informado.");
+
+        if (!File.Exists(caminhoPfx))
+            throw new FileNotFoundException(
+                "Arquivo do certificado não encontrado.",
+                caminhoPfx);
+
+        var certificado = new X509Certificate2(
+            caminhoPfx,
+            senha,
+            X509KeyStorageFlags.EphemeralKeySet);
+
+        if (!certificado.HasPrivateKey)
+        {
+            certificado.Dispose();
+            throw new InvalidOperationException(
+                "O certificado não possui chave privada.");
+        }
+
+        return certificado;
+    }
+
+    private static string? ExtrairCnpj( string subject)
     {
         if (string.IsNullOrWhiteSpace(subject))
             return null;

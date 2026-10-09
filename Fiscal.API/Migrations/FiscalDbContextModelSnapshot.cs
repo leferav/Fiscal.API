@@ -317,6 +317,9 @@ namespace Fiscal.API.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("AgenteFiscalId")
+                        .HasColumnType("uuid");
+
                     b.Property<short>("Ambiente")
                         .HasColumnType("smallint");
 
@@ -352,6 +355,9 @@ namespace Fiscal.API.Migrations
                     b.Property<string>("Recibo")
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime?>("ReservadaEm")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Serie")
                         .HasColumnType("integer");

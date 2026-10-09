@@ -45,4 +45,8 @@ public class NotaFiscal
     public DateTime? AutorizadoEm { get; set; }
 
     public Empresa Empresa { get; set; } = null!;
+
+    public Guid? AgenteFiscalId { get; set; }
+
+    public DateTime? ReservadaEm { get; set; }
 }

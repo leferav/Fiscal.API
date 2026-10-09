@@ -36,6 +36,26 @@ namespace Fiscal.API.Controllers
             }
         }
 
+        // Rota separada para testar a emissão pelo Fiscal.Agent.
+        // A rota original api/nfce/autorizar continua funcionando normalmente.
+        [HttpPost("autorizar-agent")]
+        public async Task<IActionResult> AutorizarPeloAgent([FromBody] EmitirNFeRequest request)
+        {
+            try
+            {
+                var resultado = await _fiscalService.AutorizarNFCeAsync(request, usarAgent: true);
+                return Ok(resultado);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    erro = ex.Message,
+                    detalhe = ex.InnerException?.Message
+                });
+            }
+        }
+
         [HttpGet("consultar/{chave}")]
         public IActionResult Consultar(string chave)
         {

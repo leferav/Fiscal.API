@@ -1,6 +1,8 @@
 using Fiscal.Agent.Services.Api;
 using Fiscal.Agent.Services.CertificadoDigital;
 using Fiscal.Agent.Services.Configuracao;
+using Fiscal.Agent.Services.NFCe;
+using System.Text.Json;
 
 namespace Fiscal.Agent;
 
@@ -10,17 +12,23 @@ public class Worker : BackgroundService
     private readonly CertificadoService _certificadoService;
     private readonly ConfiguracaoLocalService _configuracaoLocalService;
     private readonly FiscalApiClient _fiscalApiClient;
+    private readonly NFCeEmissaoService _emissaoService;
+    private static readonly string EstadoPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "Fiscal.Agent", "emissao-em-andamento.json");
 
     public Worker(
         ILogger<Worker> logger,
         CertificadoService certificadoService,
         ConfiguracaoLocalService configuracaoLocalService,
-        FiscalApiClient fiscalApiClient)
+        FiscalApiClient fiscalApiClient,
+        NFCeEmissaoService emissaoService)
     {
         _logger = logger;
         _certificadoService = certificadoService;
         _configuracaoLocalService = configuracaoLocalService;
         _fiscalApiClient = fiscalApiClient;
+        _emissaoService = emissaoService;
     }
 
     protected override async Task ExecuteAsync(
@@ -38,7 +46,7 @@ public class Worker : BackgroundService
             if (configuracao == null)
             {
                 Console.WriteLine(
-                    "Primeira configuraÁ„o do Fiscal.Agent.");
+                    "Primeira configura√ß√£o do Fiscal.Agent.");
                 Console.WriteLine();
 
                 Console.Write(
@@ -67,7 +75,7 @@ public class Worker : BackgroundService
 
                 Console.WriteLine();
                 Console.WriteLine(
-                    "ConfiguraÁ„o salva com sucesso.");
+                    "Configura√ß√£o salva com sucesso.");
 
                 configuracao =
                     _configuracaoLocalService.Carregar();
@@ -75,7 +83,7 @@ public class Worker : BackgroundService
                 if (configuracao == null)
                 {
                     throw new Exception(
-                        "N„o foi possÌvel carregar a configuraÁ„o salva.");
+                        "N√£o foi poss√≠vel carregar a configura√ß√£o salva.");
                 }
             }
 
@@ -99,7 +107,7 @@ public class Worker : BackgroundService
                 $"CNPJ: {certificado.Cnpj}");
 
             Console.WriteLine(
-                $"V·lido atÈ: {certificado.ValidoAte:dd/MM/yyyy}");
+                $"V√°lido at√©: {certificado.ValidoAte:dd/MM/yyyy}");
 
             Console.WriteLine(
                 $"Possui chave privada: {certificado.PossuiChavePrivada}");
@@ -112,7 +120,7 @@ public class Worker : BackgroundService
             if (configuracao == null)
             {
                 throw new Exception(
-                    "ConfiguraÁ„o local n„o encontrada.");
+                    "Configura√ß√£o local n√£o encontrada.");
             }
 
             var agenteVinculado =
@@ -125,10 +133,10 @@ public class Worker : BackgroundService
             {
                 Console.WriteLine();
                 Console.WriteLine(
-                    "Fiscal.Agent ainda n„o est· vinculado.");
+                    "Fiscal.Agent ainda n√£o est√° vinculado.");
 
                 Console.Write(
-                    "Informe o cÛdigo de vinculaÁ„o: ");
+                    "Informe o c√≥digo de vincula√ß√£o: ");
 
                 var codigo =
                     Console.ReadLine()?.Trim();
@@ -136,7 +144,7 @@ public class Worker : BackgroundService
                 if (string.IsNullOrWhiteSpace(codigo))
                 {
                     throw new Exception(
-                        "CÛdigo de vinculaÁ„o n„o informado.");
+                        "C√≥digo de vincula√ß√£o n√£o informado.");
                 }
 
                 var nomeMaquina =
@@ -169,7 +177,7 @@ public class Worker : BackgroundService
             {
                 Console.WriteLine();
                 Console.WriteLine(
-                    "Fiscal.Agent j· est· vinculado.");
+                    "Fiscal.Agent j√° est√° vinculado.");
 
                 Console.WriteLine(
                     $"AgenteId: {configuracao.AgenteId}");
@@ -180,8 +188,8 @@ public class Worker : BackgroundService
 
             Console.WriteLine();
             Console.WriteLine();
-            Console.WriteLine("Fiscal.Agent aguardando solicitaÁıes...");
-            Console.WriteLine("Heartbeat autom·tico iniciado.");
+            Console.WriteLine("Fiscal.Agent aguardando solicita√ß√µes...");
+            Console.WriteLine("Heartbeat autom√°tico iniciado.");
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -195,7 +203,7 @@ public class Worker : BackgroundService
                             configuracaoAtual.CredencialAgenteProtegida))
                     {
                         throw new InvalidOperationException(
-                            "Fiscal.Agent n„o est· vinculado.");
+                            "Fiscal.Agent n√£o est√° vinculado.");
                     }
 
                     var credencial =
@@ -209,6 +217,98 @@ public class Worker : BackgroundService
 
                     Console.WriteLine(
                         $"[{DateTime.Now:HH:mm:ss}] Heartbeat enviado com sucesso.");
+
+
+                    // Antes de buscar outra nota, tenta entregar um resultado salvo.
+                    if (File.Exists(EstadoPath))
+                    {
+                        var estado = JsonSerializer.Deserialize<EmissaoLocal>(
+                            File.ReadAllText(EstadoPath));
+
+                        if (estado == null || estado.Resultado == null)
+                        {
+                            _logger.LogError(
+                                "Existe uma emissao iniciada sem resultado confirmado. " +
+                                "Nao sera buscada outra nota. Verifique a SEFAZ e o arquivo {Arquivo}.",
+                                EstadoPath);
+                            throw new InvalidOperationException("Emissao pendente de conciliacao.");
+                        }
+
+                        if (estado.AgenteId != agenteId)
+                            throw new InvalidOperationException(
+                                "Resultado local pertence a outro agente. Verifique antes de continuar.");
+
+                        await _fiscalApiClient.EnviarResultadoEmissaoAsync(
+                            agenteId, credencial, estado.SolicitacaoId,
+                            estado.Resultado, stoppingToken);
+
+                        File.Delete(EstadoPath);
+                        Console.WriteLine("Resultado da NFC-e entregue a Fiscal.API.");
+                    }
+
+                    var solicitacao = await _fiscalApiClient.BuscarEmissaoPendenteAsync(
+                        agenteId, credencial, stoppingToken);
+
+                    if (solicitacao != null)
+                    {
+                        Console.WriteLine($"NFC-e recebida: {solicitacao.Numero}, serie {solicitacao.Serie}");
+
+                        if (string.IsNullOrWhiteSpace(solicitacao.Xml) ||
+                            string.IsNullOrWhiteSpace(solicitacao.CscId) ||
+                            string.IsNullOrWhiteSpace(solicitacao.Csc))
+                            throw new InvalidOperationException(
+                                "Solicitacao sem XML ou dados de CSC. Verifique a nota reservada na API.");
+
+                        // Registro ANTES da chamada a SEFAZ: evita retransmitir apos queda do processo.
+                        var estado = new EmissaoLocal
+                        {
+                            AgenteId = agenteId,
+                            SolicitacaoId = solicitacao.Id
+                        };
+                        SalvarEstado(estado);
+
+                        try
+                        {
+                            var retorno = _emissaoService.Emitir(
+                                solicitacao.Xml,
+                                configuracaoAtual.CaminhoCertificado,
+                                _configuracaoLocalService.DesprotegerSenha(
+                                    configuracaoAtual.SenhaProtegida),
+                                solicitacao.CscId,
+                                solicitacao.Csc);
+
+                            estado.Resultado = new ResultadoEmissaoAgent
+                            {
+                                Sucesso = retorno.Sucesso,
+                                CStat = retorno.CStat,
+                                Motivo = retorno.Motivo,
+                                ChaveAcesso = retorno.ChaveAcesso,
+                                Protocolo = retorno.Protocolo,
+                                XmlEnvio = retorno.XmlEnvio,
+                                XmlRetorno = retorno.XmlRetorno,
+                                XmlAutorizado = retorno.XmlAutorizado
+                            };
+                            SalvarEstado(estado);
+                        }
+                        catch (Exception ex) when (ex is not OperationCanceledException)
+                        {
+                            // Nao sabemos se a SEFAZ recebeu a nota. Nunca retransmitir automaticamente.
+                            estado.Resultado = new ResultadoEmissaoAgent
+                            {
+                                Sucesso = false,
+                                Motivo = "Resultado desconhecido: " + ex.Message
+                            };
+                            SalvarEstado(estado);
+                            _logger.LogError(ex, "Falha na emissao. Requer consulta antes de reenviar.");
+                        }
+
+                        await _fiscalApiClient.EnviarResultadoEmissaoAsync(
+                            agenteId, credencial, estado.SolicitacaoId,
+                            estado.Resultado!, stoppingToken);
+                        File.Delete(EstadoPath);
+                        Console.WriteLine("Resultado da emissao enviado a Fiscal.API.");
+                    }
+
                 }
                 catch (OperationCanceledException)
                     when (stoppingToken.IsCancellationRequested)
@@ -218,7 +318,7 @@ public class Worker : BackgroundService
                 catch (Exception ex)
                 {
                     _logger.LogWarning(
-                        "Falha ao enviar heartbeat: {Mensagem}",
+                        "Falha na comunicacao ou emissao: {Mensagem}",
                         ex.Message);
                 }
 
@@ -236,8 +336,23 @@ public class Worker : BackgroundService
         {
             _logger.LogError(
                 ex,
-                "Erro na execuÁ„o do Fiscal.Agent.");
+                "Erro na execu√ß√£o do Fiscal.Agent.");
         }
+    }
+
+    private static void SalvarEstado(EmissaoLocal estado)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(EstadoPath)!);
+        var temporario = EstadoPath + ".tmp";
+        File.WriteAllText(temporario, JsonSerializer.Serialize(estado));
+        File.Move(temporario, EstadoPath, true);
+    }
+
+    private sealed class EmissaoLocal
+    {
+        public Guid AgenteId { get; set; }
+        public Guid SolicitacaoId { get; set; }
+        public ResultadoEmissaoAgent? Resultado { get; set; }
     }
 
     private static string LerSenha()
