@@ -20,19 +20,22 @@ namespace Fiscal.API.Services
         private readonly NFCeBuilder _nfceBuilder;
         private readonly NFeXmlService _nfeXmlService;
         private readonly FiscalDbContext _context;
+        private readonly SolicitacaoEmissaoNFCeService _solicitacaoEmissaoService;
 
         public FiscalService(
             ZeusConfigurationFactory configFactory,
             NFeBuilder nfeBuilder,
             NFeXmlService nfeXmlService,
             NFCeBuilder nfceBuilder,
-            FiscalDbContext context)
+            FiscalDbContext context,
+            SolicitacaoEmissaoNFCeService solicitacaoEmissaoService)
         {
             _configFactory = configFactory;
             _nfeBuilder = nfeBuilder;
             _nfeXmlService = nfeXmlService;
             _nfceBuilder = nfceBuilder;
             _context = context;
+            _solicitacaoEmissaoService = solicitacaoEmissaoService;
         }
 
         #region NF-e
@@ -155,26 +158,9 @@ namespace Fiscal.API.Services
 
         #region NFC-e
 
-        public async Task<object> AutorizarNFCeAsync(EmitirNFeRequest request)
+        // Compartilhado pela emissão legada e pelo teste da fila.
+        private async Task<List<ItemFiscal>> MontarItensFiscaisAsync(EmitirNFeRequest request)
         {
-            var empresa = await _context.Empresas
-                .Include(x => x.ConfiguracaoFiscal)
-                .Include(x => x.ConfiguracoesTributarias)
-                .FirstOrDefaultAsync(x => x.Id == request.EmpresaId);
-
-            if (empresa is null)
-                throw new Exception("Empresa não encontrada.");
-
-            if (!empresa.Ativo)
-                throw new Exception("Empresa está inativa.");
-
-            if (empresa.ConfiguracaoFiscal is null)
-                throw new Exception(
-                    "Empresa não possui configuração fiscal.");
-
-
-            var configuracaoFiscal = empresa.ConfiguracaoFiscal;
-
             if (request.Produtos == null || request.Produtos.Count == 0)
             {
                 throw new Exception(
@@ -195,7 +181,7 @@ namespace Fiscal.API.Services
                     .Include(x => x.ConfiguracaoTributaria)
                     .Where(x =>
                         produtoIds.Contains(x.Id) &&
-                        x.EmpresaId == empresa.Id &&
+                        x.EmpresaId == request.EmpresaId &&
                         x.Ativo)
                     .ToListAsync();
 
@@ -266,6 +252,55 @@ namespace Fiscal.API.Services
                     }
                 );
             }
+
+            return itensFiscais;
+        }
+
+        // Somente uso interno em Development: grava e desfaz a solicitação.
+        public async Task<object> TestarSolicitacaoNFCeAsync(EmitirNFeRequest request)
+        {
+            var itensFiscais = await MontarItensFiscaisAsync(request);
+            var solicitacao = await _solicitacaoEmissaoService.CriarAsync(
+                request.EmpresaId,
+                itensFiscais,
+                request.Destinatario,
+                somenteTeste: true);
+
+            return new
+            {
+                solicitacao.Id,
+                solicitacao.EmpresaId,
+                solicitacao.Modelo,
+                solicitacao.Ambiente,
+                solicitacao.Serie,
+                solicitacao.Numero,
+                solicitacao.Status,
+                solicitacao.PayloadJson,
+                rollbackExecutado = true
+            };
+        }
+
+        public async Task<object> AutorizarNFCeAsync(EmitirNFeRequest request)
+        {
+            var empresa = await _context.Empresas
+                .Include(x => x.ConfiguracaoFiscal)
+                .Include(x => x.ConfiguracoesTributarias)
+                .FirstOrDefaultAsync(x => x.Id == request.EmpresaId);
+
+            if (empresa is null)
+                throw new Exception("Empresa não encontrada.");
+
+            if (!empresa.Ativo)
+                throw new Exception("Empresa está inativa.");
+
+            if (empresa.ConfiguracaoFiscal is null)
+                throw new Exception(
+                    "Empresa não possui configuração fiscal.");
+
+
+            var configuracaoFiscal = empresa.ConfiguracaoFiscal;
+
+            var itensFiscais = await MontarItensFiscaisAsync(request);
 
             // Monta a NFC-e
             var nfce =

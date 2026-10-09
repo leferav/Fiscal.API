@@ -53,43 +53,4 @@ public class NumeracaoNFCeService
     }
 
 
-
-
-    public async Task<object> TestarReservaAsync(
-        Guid empresaId,
-        CancellationToken cancellationToken = default)
-    {
-        await using var transacao =
-            await _context.Database.BeginTransactionAsync(
-                cancellationToken);
-
-        var configuracao =
-            await ObterConfiguracaoComBloqueioAsync(
-                empresaId, cancellationToken);
-
-        var numeroAntes = configuracao.ProximoNumeroNFCe;
-
-        configuracao.ProximoNumeroNFCe++;
-
-        await _context.SaveChangesAsync(cancellationToken);
-
-        var numeroDurante = configuracao.ProximoNumeroNFCe;
-
-        // Teste: nenhuma alteração será confirmada.
-        await transacao.RollbackAsync(cancellationToken);
-
-        // Evita manter no DbContext a entidade com valor
-        // alterado após o rollback.
-        _context.Entry(configuracao).State =
-            EntityState.Detached;
-
-        return new
-        {
-            empresaId,
-            numeroAntes,
-            numeroDurante,
-            rollbackExecutado = true
-        };
-    }
-
 }

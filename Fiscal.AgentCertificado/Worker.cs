@@ -42,7 +42,7 @@ public class Worker : BackgroundService
             if (configuracao == null)
             {
                 Console.WriteLine(
-                    "Primeira configuraÁ„o do Fiscal.Agent.");
+                    "Primeira configura√ß√£o do Fiscal.Agent.");
                 Console.WriteLine();
 
                 Console.Write(
@@ -71,7 +71,7 @@ public class Worker : BackgroundService
 
                 Console.WriteLine();
                 Console.WriteLine(
-                    "ConfiguraÁ„o salva com sucesso.");
+                    "Configura√ß√£o salva com sucesso.");
 
                 configuracao =
                     _configuracaoLocalService.Carregar();
@@ -79,7 +79,7 @@ public class Worker : BackgroundService
                 if (configuracao == null)
                 {
                     throw new Exception(
-                        "N„o foi possÌvel carregar a configuraÁ„o salva.");
+                        "N√£o foi poss√≠vel carregar a configura√ß√£o salva.");
                 }
             }
 
@@ -103,7 +103,7 @@ public class Worker : BackgroundService
                 $"CNPJ: {certificado.Cnpj}");
 
             Console.WriteLine(
-                $"V·lido atÈ: {certificado.ValidoAte:dd/MM/yyyy}");
+                $"V√°lido at√©: {certificado.ValidoAte:dd/MM/yyyy}");
 
             Console.WriteLine(
                 $"Possui chave privada: {certificado.PossuiChavePrivada}");
@@ -116,7 +116,7 @@ public class Worker : BackgroundService
             if (configuracao == null)
             {
                 throw new Exception(
-                    "ConfiguraÁ„o local n„o encontrada.");
+                    "Configura√ß√£o local n√£o encontrada.");
             }
 
             var agenteVinculado =
@@ -129,10 +129,10 @@ public class Worker : BackgroundService
             {
                 Console.WriteLine();
                 Console.WriteLine(
-                    "Fiscal.Agent ainda n„o est· vinculado.");
+                    "Fiscal.Agent ainda n√£o est√° vinculado.");
 
                 Console.Write(
-                    "Informe o cÛdigo de vinculaÁ„o: ");
+                    "Informe o c√≥digo de vincula√ß√£o: ");
 
                 var codigo =
                     Console.ReadLine()?.Trim();
@@ -140,7 +140,7 @@ public class Worker : BackgroundService
                 if (string.IsNullOrWhiteSpace(codigo))
                 {
                     throw new Exception(
-                        "CÛdigo de vinculaÁ„o n„o informado.");
+                        "C√≥digo de vincula√ß√£o n√£o informado.");
                 }
 
                 var nomeMaquina =
@@ -173,7 +173,7 @@ public class Worker : BackgroundService
             {
                 Console.WriteLine();
                 Console.WriteLine(
-                    "Fiscal.Agent j· est· vinculado.");
+                    "Fiscal.Agent j√° est√° vinculado.");
 
                 Console.WriteLine(
                     $"AgenteId: {configuracao.AgenteId}");
@@ -184,8 +184,8 @@ public class Worker : BackgroundService
 
             Console.WriteLine();
             Console.WriteLine();
-            // Sincroniza os metadados uma vez na inicializaÁ„o.
-            // Falhas n„o impedem o heartbeat.
+            // Sincroniza os metadados uma vez na inicializa√ß√£o.
+            // Falhas n√£o impedem o heartbeat.
             try
             {
                 var configuracaoAtual = _configuracaoLocalService.Carregar();
@@ -193,7 +193,7 @@ public class Worker : BackgroundService
                     agenteId == Guid.Empty ||
                     string.IsNullOrWhiteSpace(configuracaoAtual.CredencialAgenteProtegida))
                 {
-                    throw new InvalidOperationException("Agent n„o vinculado.");
+                    throw new InvalidOperationException("Agent n√£o vinculado.");
                 }
 
                 var credencial = _configuracaoLocalService.DesprotegerCredencialAgente(
@@ -213,13 +213,19 @@ public class Worker : BackgroundService
                 _logger.LogWarning("Falha ao sincronizar certificado: {Mensagem}", ex.Message);
             }
 
-            Console.WriteLine("Fiscal.Agent aguardando solicitaÁıes...");
-            Console.WriteLine("Heartbeat autom·tico iniciado.");
+            Console.WriteLine("Fiscal.Agent aguardando solicita√ß√µes...");
+            Console.WriteLine("Heartbeat autom√°tico iniciado.");
+
+            // Desativado por padr√£o. Ativar apenas para teste controlado
+            // com solicita√ß√µes de homologa√ß√£o criadas especificamente para isso.
+            var consultarFilaTeste = string.Equals(
+                Environment.GetEnvironmentVariable("FISCAL_AGENT_CONSULTAR_FILA_TESTE"),
+                "true", StringComparison.OrdinalIgnoreCase);
 
             _logger.LogInformation(
-                "Processador de emiss„o registrado. " +
-                "Consulta autom·tica da fila desabilitada. " +
-                "Transmiss„o ‡ SEFAZ desabilitada.");
+                "Consulta da fila em modo de teste: {Ativa}. " +
+                "Assinatura e transmiss√£o SEFAZ desabilitadas.",
+                consultarFilaTeste);
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -233,7 +239,7 @@ public class Worker : BackgroundService
                             configuracaoAtual.CredencialAgenteProtegida))
                     {
                         throw new InvalidOperationException(
-                            "Fiscal.Agent n„o est· vinculado.");
+                            "Fiscal.Agent n√£o est√° vinculado.");
                     }
 
                     var credencial =
@@ -247,6 +253,49 @@ public class Worker : BackgroundService
 
                     Console.WriteLine(
                         $"[{DateTime.Now:HH:mm:ss}] Heartbeat enviado com sucesso.");
+
+                    if (consultarFilaTeste)
+                    {
+                        // A consulta RESERVA a solicita√ß√£o na API.
+                        // Nunca ativar contra uma fila real de emiss√£o.
+                        var solicitacao = await _fiscalApiClient
+                            .ObterProximaSolicitacaoAsync(
+                                agenteId, credencial, stoppingToken);
+
+                        if (solicitacao != null)
+                        {
+                            string detalhe;
+                            try
+                            {
+                                _processadorEmissaoService.ValidarSolicitacao(solicitacao);
+                                detalhe = "Simula√ß√£o conclu√≠da: payload validado; sem emiss√£o SEFAZ.";
+                                _logger.LogInformation(
+                                    "Solicita√ß√£o {Id}, n√∫mero {Numero}: payload validado (simula√ß√£o).",
+                                    solicitacao.Id, solicitacao.Numero);
+                            }
+                            catch (Exception ex)
+                            {
+                                detalhe = "Falha na valida√ß√£o da solicita√ß√£o: " + ex.Message;
+                                _logger.LogWarning(
+                                    "Solicita√ß√£o {Id}: {Mensagem}",
+                                    solicitacao.Id, ex.Message);
+                            }
+
+                            // O status ERRO √© intencional no teste: n√£o foi emitida NFC-e.
+                            // A tentativa deve ser encerrada para n√£o ficar PROCESSANDO.
+                            await _fiscalApiClient.EnviarResultadoSolicitacaoAsync(
+                                agenteId,
+                                solicitacao.Id,
+                                new ResultadoEmissaoRequest
+                                {
+                                    Credencial = credencial,
+                                    TentativaId = solicitacao.TentativaId,
+                                    Status = "ERRO",
+                                    Erro = detalhe
+                                },
+                                stoppingToken);
+                        }
+                    }
                 }
                 catch (OperationCanceledException)
                     when (stoppingToken.IsCancellationRequested)
@@ -274,7 +323,7 @@ public class Worker : BackgroundService
         {
             _logger.LogError(
                 ex,
-                "Erro na execuÁ„o do Fiscal.Agent.");
+                "Erro na execu√ß√£o do Fiscal.Agent.");
         }
     }
 

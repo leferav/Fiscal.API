@@ -30,7 +30,8 @@ public class SolicitacaoEmissaoNFCeService
         Guid empresaId,
         List<ItemFiscal> itensFiscais,
         DestinatarioRequest? destinatario = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool somenteTeste = false)
     {
         if (empresaId == Guid.Empty)
             throw new ArgumentException("Empresa inválida.");
@@ -107,8 +108,18 @@ public class SolicitacaoEmissaoNFCeService
         await _context.SaveChangesAsync(
             cancellationToken);
 
-        await transacao.CommitAsync(
-            cancellationToken);
+        if (somenteTeste)
+        {
+            await transacao.RollbackAsync(cancellationToken);
+
+            // O rollback não limpa automaticamente
+            // as entidades rastreadas pelo EF Core.
+            _context.ChangeTracker.Clear();
+        }
+        else
+        {
+            await transacao.CommitAsync(cancellationToken);
+        }
 
         return solicitacao;
     }
