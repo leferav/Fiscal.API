@@ -3,6 +3,7 @@ using Fiscal.API.Models.Database;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NFe.Utils.NFe;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -385,10 +386,43 @@ public class AgentesFiscaisController : ControllerBase
             return NoContent();
         }
 
+        // Prepara a NFC-e antes de entregar ao Agent.
+        // Executado somente para notas PENDENTE_AGENT,
+        // ainda não reservadas por outro Agent.
+
+        var nfce = new global::NFe.Classes.NFe()
+            .CarregarDeXmlString(notaReservada.XmlEnvio!);
+
+        // Segurança: não modificar um XML já assinado.
+        if (!string.IsNullOrWhiteSpace(nfce.infNFe.Id) ||
+            nfce.Signature != null)
+        {
+            return Conflict(
+                "A NFC-e pendente já possui identificação ou assinatura. " +
+                "É necessária uma análise antes de processar.");
+        }
+
+        // Horário da emissão no fuso de Brasília.
+        var fusoBrasil = TimeZoneInfo.FindSystemTimeZoneById(
+            "America/Sao_Paulo");
+
+        var agora = DateTime.UtcNow;
+
+        var dataHoraEmissao = TimeZoneInfo.ConvertTime(
+            new DateTimeOffset(agora, TimeSpan.Zero),
+            fusoBrasil);
+
+        // Atualiza a data antes da assinatura no Agent.
+        nfce.infNFe.ide.dhEmi = dataHoraEmissao;
+
+        // Mantém o mesmo número, série e código numérico.
+        // O Zeus gerará a chave ao assinar.
+        notaReservada.XmlEnvio = nfce.ObterXmlString();
+
         notaReservada.Status = "EM_PROCESSAMENTO";
         notaReservada.AgenteFiscalId = agenteId;
-        notaReservada.ReservadaEm = DateTime.UtcNow;
-        notaReservada.AtualizadoEm = DateTime.UtcNow;
+        notaReservada.ReservadaEm = agora;
+        notaReservada.AtualizadoEm = agora;
 
         await _context.SaveChangesAsync(cancellationToken);
         await transacao.CommitAsync(cancellationToken);

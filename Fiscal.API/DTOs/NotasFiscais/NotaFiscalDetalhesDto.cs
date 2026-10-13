@@ -33,4 +33,6 @@ public class NotaFiscalDetalhesDto
     public DateTime? AtualizadoEm { get; set; }
 
     public DateTime? AutorizadoEm { get; set; }
+
+    public DateTimeOffset? DataEmissaoFiscal { get; set; }
 }

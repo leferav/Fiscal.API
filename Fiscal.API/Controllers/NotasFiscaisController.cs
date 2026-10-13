@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
+using System.Globalization;
 using System.Security.Claims;
+using System.Xml.Linq;
 
 namespace Fiscal.API.Controllers;
 
@@ -104,6 +106,40 @@ public class NotasFiscaisController : ControllerBase
             {
                 mensagem = "Nota fiscal não encontrada."
             });
+        }
+
+        var xmlAutorizado = await _context.NotasFiscais
+            .AsNoTracking()
+            .Where(x =>
+                x.Id == id &&
+                x.EmpresaId == empresaId)
+            .Select(x => x.XmlAutorizado)
+            .FirstOrDefaultAsync();
+
+        if (!string.IsNullOrWhiteSpace(xmlAutorizado))
+        {
+            try
+            {
+                var documento = XDocument.Parse(xmlAutorizado);
+
+                var dhEmi = documento
+                    .Descendants()
+                    .FirstOrDefault(x => x.Name.LocalName == "dhEmi")
+                    ?.Value;
+
+                if (DateTimeOffset.TryParse(
+                    dhEmi,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var dataEmissao))
+                {
+                    nota.DataEmissaoFiscal = dataEmissao;
+                }
+            }
+            catch (System.Xml.XmlException)
+            {
+                // Mantém DataEmissaoFiscal nulo se o XML estiver inválido.
+            }
         }
 
         return Ok(nota);

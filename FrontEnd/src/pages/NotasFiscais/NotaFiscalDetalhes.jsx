@@ -293,8 +293,13 @@ export default function NotaFiscalDetalhes() {
 
           <div className="detalhe-datas">
             <Info
-              titulo="Emitida em"
+              titulo="Solicitação criada em"
               valor={formatarData(nota.criadoEm)}
+            />
+
+            <Info
+              titulo="Emissão fiscal"
+              valor={formatarData(nota.dataEmissaoFiscal)}
             />
 
             <Info

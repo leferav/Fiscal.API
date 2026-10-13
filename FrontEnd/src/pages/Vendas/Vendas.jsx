@@ -23,6 +23,23 @@ export default function Vendas() {
     });
     const envioEmCursoRef = useRef(false);
     const [mensagemEmissao, setMensagemEmissao] = useState("");
+    const [esperaLonga, setEsperaLonga] = useState(false);
+    const [consultaManual, setConsultaManual] = useState(0);
+    const [consultandoAgora, setConsultandoAgora] = useState(false);
+
+    // Ao recarregar a página, restaura o carrinho associado à solicitação pendente.
+    useEffect(() => {
+        if (solicitacaoPendente?.itens?.length) setItens(solicitacaoPendente.itens);
+    }, []);
+
+    useEffect(() => {
+        if (!solicitacaoPendente) { setEsperaLonga(false); return; }
+        const inicio = solicitacaoPendente.criadaEm || Date.now();
+        const atualizar = () => setEsperaLonga(Date.now() - inicio >= 30000);
+        atualizar();
+        const intervalo = setInterval(atualizar, 1000);
+        return () => clearInterval(intervalo);
+    }, [solicitacaoPendente?.solicitacaoId]);
 
     function guardarSolicitacao(pendente) {
         if (chavePendente) {
@@ -42,6 +59,7 @@ export default function Vendas() {
         async function verificar() {
             if (!ativo || consultando) return;
             consultando = true;
+            setConsultandoAgora(true);
             try {
                 const nota = await consultarSolicitacaoNFCe(solicitacaoPendente.solicitacaoId);
                 if (!ativo) return;
@@ -67,12 +85,15 @@ export default function Vendas() {
                 if (ativo) setMensagemEmissao(`Não foi possível consultar a solicitação ${solicitacaoPendente.solicitacaoId}. Não reenvie a venda; a consulta será repetida.`);
             } finally {
                 consultando = false;
-                if (ativo) timer = setTimeout(verificar, 2000);
+                if (ativo) {
+                    setConsultandoAgora(false);
+                    timer = setTimeout(verificar, 5000);
+                }
             }
         }
         verificar();
         return () => { ativo = false; clearTimeout(timer); };
-    }, [solicitacaoPendente?.solicitacaoId]);
+    }, [solicitacaoPendente?.solicitacaoId, consultaManual]);
 
     useEffect(() => {
     async function carregarProdutos() {
@@ -228,6 +249,8 @@ export default function Vendas() {
             guardarSolicitacao({
                 solicitacaoId: resultado.solicitacaoId,
                 numero: resultado.numero,
+                criadaEm: Date.now(),
+                itens: itens.map(item => ({ ...item })),
             });
             setMensagemEmissao(`NFC-e ${resultado.numero} enviada. Aguardando autorização pela SEFAZ...`);
         } catch (error) {
@@ -254,6 +277,24 @@ export default function Vendas() {
 
         {mensagemEmissao && (
             <div className="alert alert-info" role="status">{mensagemEmissao}</div>
+        )}
+        {solicitacaoPendente && esperaLonga && (
+            <div className="alert alert-warning" role="alert">
+                <strong>Fiscal.Agent indisponível ou demorando para responder.</strong>{" "}
+                NFC-e {solicitacaoPendente.numero} já registrada. Não envie novamente.
+                O acompanhamento continuará automaticamente.
+                <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                    <button type="button" className="btn btn-outline-primary btn-sm"
+                        disabled={consultandoAgora}
+                        onClick={() => setConsultaManual(n => n + 1)}>
+                        {consultandoAgora ? "Consultando..." : "Consultar situação agora"}
+                    </button>
+                    <button type="button" className="btn btn-outline-secondary btn-sm"
+                        onClick={() => setModalFinalizarAberto(false)}>
+                        Fechar janela de finalização
+                    </button>
+                </div>
+            </div>
         )}
         {erroEmissao && !modalFinalizarAberto && (
             <div className="alert alert-danger" role="alert">{erroEmissao}</div>
@@ -477,10 +518,10 @@ export default function Vendas() {
         aberto={modalFinalizarAberto}
         quantidadeItens={quantidadeTotal}
         valorTotal={valorTotal}
-        emitindo={emitindo || !!solicitacaoPendente}
+        emitindo={emitindo || (!!solicitacaoPendente && !esperaLonga)}
         erroEmissao={erroEmissao}
         onFechar={() => {
-            if (!emitindo && !solicitacaoPendente) {
+            if (!emitindo && (!solicitacaoPendente || esperaLonga)) {
             setErroEmissao("");
             setModalFinalizarAberto(false);
             }
