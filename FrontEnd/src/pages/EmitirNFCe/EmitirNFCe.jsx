@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { obterProdutosPorEmpresa, autorizarNFCe,} from "../../services/fiscalApi";
+import { obterProdutosPorEmpresa, autorizarNFCeAgent } from "../../services/fiscalApi";
 import { obterEmpresaId, } from "../../services/authService";
 import "./EmitirNFCe.css";
 
@@ -13,6 +13,7 @@ export default function EmitirNFCe({ onLogout }) {
   const [emitindo, setEmitindo] = useState(false);
   const [resultadoEmissao, setResultadoEmissao] = useState(null);
   const [erroEmissao, setErroEmissao] = useState("");
+  const [emissaoPendente, setEmissaoPendente] = useState(null);
   const inputBuscaRef = useRef(null);
   const empresaId = obterEmpresaId();
 
@@ -173,6 +174,7 @@ export default function EmitirNFCe({ onLogout }) {
   }
 
   function limparVenda() {
+    if (emissaoPendente) return;
     setItens([]);
     setBusca("");
     setCpfConsumidor("");
@@ -262,7 +264,7 @@ export default function EmitirNFCe({ onLogout }) {
      EMITIR NFC-e
   ============================================================ */
   async function emitirNFCe() {
-    if (itens.length === 0 || emitindo) {
+    if (itens.length === 0 || emitindo || emissaoPendente) {
       return;
     }
 
@@ -298,9 +300,16 @@ export default function EmitirNFCe({ onLogout }) {
 
       console.log("Enviando NFC-e:", request);
 
-    const resultado = await autorizarNFCe(request);
+    const resultado = await autorizarNFCeAgent(request);
 
     console.log("Retorno NFC-e:", resultado);
+
+    // A API aceitou a solicitação, mas a SEFAZ ainda não autorizou.
+    if (resultado?.pendente === true && resultado?.status === "PENDENTE_AGENT") {
+      setEmissaoPendente(resultado);
+      setResultadoEmissao(null);
+      return;
+    }
 
     // NFC-e autorizada pela SEFAZ
     if (Number(resultado?.cStat) === 100) {
@@ -609,7 +618,7 @@ export default function EmitirNFCe({ onLogout }) {
             type="button"
             className="btn btn-outline-danger btn-limpar"
             onClick={limparVenda}
-            disabled={itens.length === 0}
+            disabled={itens.length === 0 || Boolean(emissaoPendente)}
           >
             <i className="bi bi-trash3" />
             Limpar venda
@@ -642,9 +651,14 @@ export default function EmitirNFCe({ onLogout }) {
             type="button"
             className="btn btn-emitir"
             onClick={emitirNFCe}
-            disabled={itens.length === 0 || emitindo}
+            disabled={itens.length === 0 || emitindo || Boolean(emissaoPendente)}
           >
-            {emitindo ? (
+            {emissaoPendente ? (
+              <>
+                <i className="bi bi-hourglass-split" />
+                Aguardando Fiscal.Agent
+              </>
+            ) : emitindo ? (
               <>
                 <span
                   className="spinner-border spinner-border-sm"
@@ -660,6 +674,23 @@ export default function EmitirNFCe({ onLogout }) {
             )}
           </button>
         </section>
+
+        {/* SOLICITAÇÃO PENDENTE NO AGENT */}
+        {emissaoPendente && (
+          <div className="alert alert-info mt-3" role="status">
+            <div className="d-flex align-items-center">
+              <i className="bi bi-hourglass-split me-2" />
+              <strong>
+                NFC-e nº {emissaoPendente.numero}, série {emissaoPendente.serie},
+                aguardando emissão pelo Fiscal.Agent.
+              </strong>
+            </div>
+            <div className="mt-2">
+              A solicitação foi registrada, mas a autorização da SEFAZ ainda não foi confirmada.
+              Consulte a tela Notas Fiscais para verificar o resultado antes de iniciar outra emissão.
+            </div>
+          </div>
+        )}
 
         {/* RETORNO */}
         {resultadoEmissao && (

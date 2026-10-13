@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { obterProdutos } from "../../services/produtoService";
 import FinalizarVendaModal from "./FinalizarVendaModal";
-import { autorizarNFCe } from "../../services/fiscalApi";
+import { autorizarNFCeAgent, consultarSolicitacaoNFCe } from "../../services/fiscalApi";
 import { obterEmpresaId } from "../../services/authService";
 import "./Vendas.css";
 
@@ -15,6 +15,64 @@ export default function Vendas() {
     const [emitindo, setEmitindo] = useState(false);
     const [erroEmissao, setErroEmissao] = useState("");
     const empresaId = obterEmpresaId();
+    const chavePendente = empresaId ? `fiscal-pdv-pendente-${empresaId}` : null;
+    const [solicitacaoPendente, setSolicitacaoPendente] = useState(() => {
+        if (!empresaId) return null;
+        try { return JSON.parse(localStorage.getItem(`fiscal-pdv-pendente-${empresaId}`) || "null"); }
+        catch { return null; }
+    });
+    const envioEmCursoRef = useRef(false);
+    const [mensagemEmissao, setMensagemEmissao] = useState("");
+
+    function guardarSolicitacao(pendente) {
+        if (chavePendente) {
+            if (pendente) localStorage.setItem(chavePendente, JSON.stringify(pendente));
+            else localStorage.removeItem(chavePendente);
+        }
+        setSolicitacaoPendente(pendente);
+    }
+
+    // Consulta periodicamente a nota sem realizar outro POST de emissão.
+    useEffect(() => {
+        if (!solicitacaoPendente?.solicitacaoId) return;
+        let ativo = true;
+        let timer;
+        let consultando = false;
+
+        async function verificar() {
+            if (!ativo || consultando) return;
+            consultando = true;
+            try {
+                const nota = await consultarSolicitacaoNFCe(solicitacaoPendente.solicitacaoId);
+                if (!ativo) return;
+                const status = String(nota?.status || "").toUpperCase();
+                if (status === "AUTORIZADA" && Number(nota?.cStat) === 100) {
+                    guardarSolicitacao(null);
+                    setEmitindo(false);
+                    setItens([]);
+                    setPesquisa("");
+                    setModalFinalizarAberto(false);
+                    setErroEmissao("");
+                    setMensagemEmissao(`NFC-e ${nota.numero} autorizada com sucesso. Protocolo: ${nota.protocolo || "-"}`);
+                    return;
+                }
+                if (["REJEITADA", "ERRO", "CANCELADA"].includes(status)) {
+                    guardarSolicitacao(null);
+                    setEmitindo(false);
+                    setErroEmissao(nota?.xMotivo || `NFC-e ${nota?.numero}: ${status}`);
+                    return;
+                }
+                setMensagemEmissao(`NFC-e ${nota?.numero || solicitacaoPendente.numero} aguardando processamento (${status || "PENDENTE"}).`);
+            } catch (error) {
+                if (ativo) setMensagemEmissao(`Não foi possível consultar a solicitação ${solicitacaoPendente.solicitacaoId}. Não reenvie a venda; a consulta será repetida.`);
+            } finally {
+                consultando = false;
+                if (ativo) timer = setTimeout(verificar, 2000);
+            }
+        }
+        verificar();
+        return () => { ativo = false; clearTimeout(timer); };
+    }, [solicitacaoPendente?.solicitacaoId]);
 
     useEffect(() => {
     async function carregarProdutos() {
@@ -143,63 +201,43 @@ export default function Vendas() {
     );  
 
     async function finalizarVenda(dados) {
-    if (itens.length === 0 || emitindo) {
-        return;
-    }
-
-    if (!empresaId) {
-        setErroEmissao("Empresa da sessão não encontrada.");
-        return;
-    }
-
-    const request = {
-        empresaId,
-
-        destinatario: {
-        cpfCnpj: dados.cpf || null,
-        },
-
-        produtos: itens.map((item) => ({
-        produtoId: item.id,
-        quantidade: item.quantidade,
-        })),
-    };
-
-    try {
-        setEmitindo(true);
-        setErroEmissao("");
-
-        const resultado = await autorizarNFCe(request);
-
-        console.log("Retorno NFC-e:", resultado);
-
-        if (Number(resultado?.cStat) !== 100) {
-        setErroEmissao(
-            resultado?.xMotivo ||
-            "A NFC-e não foi autorizada pela SEFAZ."
-        );
-
-        return;
+        if (itens.length === 0 || emitindo || solicitacaoPendente || envioEmCursoRef.current) return;
+        if (!empresaId) {
+            setErroEmissao("Empresa da sessão não encontrada.");
+            return;
         }
 
-        // Somente limpa a venda se realmente foi autorizada.
-        setItens([]);
-        setPesquisa("");
-        setModalFinalizarAberto(false);
+        const request = {
+            empresaId,
+            destinatario: { cpfCnpj: dados.cpf || null },
+            produtos: itens.map((item) => ({
+                produtoId: item.id,
+                quantidade: item.quantidade,
+            })),
+        };
 
-        alert(
-        `NFC-e ${resultado.numero ?? ""} autorizada com sucesso.`
-        );
-    } catch (error) {
-        console.error("Erro na emissão da NFC-e:", error);
-
-        setErroEmissao(
-        error.message ||
-            "Não foi possível emitir a NFC-e."
-        );
-    } finally {
-        setEmitindo(false);
-    }
+        envioEmCursoRef.current = true;
+        setEmitindo(true);
+        setErroEmissao("");
+        setMensagemEmissao("Enviando NFC-e para o Fiscal.Agent...");
+        try {
+            const resultado = await autorizarNFCeAgent(request);
+            if (!resultado?.solicitacaoId || !resultado?.pendente) {
+                throw new Error("Resposta inesperada da API. Confira a nota antes de tentar novamente.");
+            }
+            guardarSolicitacao({
+                solicitacaoId: resultado.solicitacaoId,
+                numero: resultado.numero,
+            });
+            setMensagemEmissao(`NFC-e ${resultado.numero} enviada. Aguardando autorização pela SEFAZ...`);
+        } catch (error) {
+            console.error("Erro ao solicitar NFC-e:", error);
+            setErroEmissao(`${error.message || "Falha na comunicação."} Verifique as notas fiscais antes de reenviar: a solicitação pode ter sido registrada.`);
+            setMensagemEmissao("");
+        } finally {
+            envioEmCursoRef.current = false;
+            setEmitindo(false);
+        }
     }
 
     return (
@@ -214,6 +252,12 @@ export default function Vendas() {
         </div>
         </header>
 
+        {mensagemEmissao && (
+            <div className="alert alert-info" role="status">{mensagemEmissao}</div>
+        )}
+        {erroEmissao && !modalFinalizarAberto && (
+            <div className="alert alert-danger" role="alert">{erroEmissao}</div>
+        )}
         {erro && (
         <div className="vendas-erro">
             {erro}
@@ -256,7 +300,8 @@ export default function Vendas() {
                     type="button"
                     className="vendas-produto-card"
                     key={produto.id}
-                    onClick={() => adicionarProduto(produto)}
+                    disabled={!!solicitacaoPendente || emitindo}
+                     onClick={() => adicionarProduto(produto)}
                     >
                     <div className="vendas-produto-icone">
                     <i className="bi bi-box-seam" />
@@ -402,7 +447,7 @@ export default function Vendas() {
             <button
                 type="button"
                 className="vendas-limpar"
-                disabled={itens.length === 0}
+                disabled={itens.length === 0 || !!solicitacaoPendente || emitindo}
                 onClick={() => {
                 setItens([]);
                 setPesquisa("");
@@ -416,7 +461,7 @@ export default function Vendas() {
             <button
                 type="button"
                 className="vendas-finalizar"
-                disabled={itens.length === 0}
+                disabled={itens.length === 0 || !!solicitacaoPendente || emitindo}
                 onClick={() => setModalFinalizarAberto(true)}
             >
                 <i className="bi bi-check-circle" />
@@ -432,16 +477,16 @@ export default function Vendas() {
         aberto={modalFinalizarAberto}
         quantidadeItens={quantidadeTotal}
         valorTotal={valorTotal}
-        emitindo={emitindo}
+        emitindo={emitindo || !!solicitacaoPendente}
         erroEmissao={erroEmissao}
         onFechar={() => {
-            if (!emitindo) {
+            if (!emitindo && !solicitacaoPendente) {
             setErroEmissao("");
             setModalFinalizarAberto(false);
             }
         }}
         onCancelarVenda={() => {
-            if (!emitindo) {
+            if (!emitindo && !solicitacaoPendente) {
             setItens([]);
             setPesquisa("");
             setErroEmissao("");
