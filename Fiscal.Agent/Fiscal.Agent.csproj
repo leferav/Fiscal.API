@@ -14,6 +14,10 @@
     <PackageReference Include="System.Security.Cryptography.Xml" Version="6.0.1" />
     <PackageReference Include="Zeus.Net.NFe.NFCe" Version="2026.9.24.1416" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fiscal.API\Fiscal.API.csproj" />
+  </ItemGroup>
   
   <ItemGroup>
     <None Update="Schemas\**\*">

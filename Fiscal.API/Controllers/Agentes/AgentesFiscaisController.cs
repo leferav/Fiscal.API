@@ -542,6 +542,218 @@ public class AgentesFiscaisController : ControllerBase
             protocolo = nota.Protocolo
         });
     }
+
+
+    [HttpGet("emissoes/travadas")]
+    public async Task<IActionResult> ListarEmissoesTravadas(
+    CancellationToken cancellationToken)
+    {
+        if (!TryObterEmpresaId(out var empresaId))
+        {
+            return Unauthorized(new
+            {
+                mensagem = "Empresa não identificada no token."
+            });
+        }
+
+        var limite = DateTime.UtcNow.AddSeconds(-60);
+
+        var notas = await _context.NotasFiscais
+            .AsNoTracking()
+            .Where(x =>
+                x.EmpresaId == empresaId &&
+                x.Modelo == 65 &&
+                x.Status == "EM_PROCESSAMENTO" &&
+                x.ReservadaEm != null &&
+                x.ReservadaEm < limite)
+            .OrderBy(x => x.ReservadaEm)
+            .Select(x => new
+            {
+                solicitacaoId = x.Id,
+                numero = x.Numero,
+                serie = x.Serie,
+                status = x.Status,
+                agenteFiscalId = x.AgenteFiscalId,
+                reservadaEm = x.ReservadaEm,
+                criadoEm = x.CriadoEm,
+                cStat = x.CStat,
+                protocolo = x.Protocolo,
+                requerConciliacao = true
+            })
+            .ToListAsync(cancellationToken);
+
+        return Ok(new
+        {
+            total = notas.Count,
+            notas
+        });
+    }
+
+
+
+    [HttpGet("emissoes/{solicitacaoId:guid}/pre-verificacao")]
+    public async Task<IActionResult> PreVerificarRecuperacao( Guid solicitacaoId, CancellationToken cancellationToken)
+    {
+        if (!TryObterEmpresaId(out var empresaId))
+        {
+            return Unauthorized(new
+            {
+                mensagem = "Empresa não identificada no token."
+            });
+        }
+
+        var nota = await _context.NotasFiscais
+            .AsNoTracking()
+            .Where(x =>
+                x.Id == solicitacaoId &&
+                x.EmpresaId == empresaId &&
+                x.Modelo == 65)
+            .Select(x => new
+            {
+                x.Id,
+                x.Numero,
+                x.Serie,
+                x.Status,
+                x.AgenteFiscalId,
+                x.ReservadaEm,
+                x.RecebidaPeloAgenteEm,
+                x.CStat,
+                x.Protocolo,
+                x.ChaveAcesso,
+                possuiXmlRetorno = x.XmlRetorno != null &&
+                                   x.XmlRetorno != "",
+                possuiXmlAutorizado = x.XmlAutorizado != null &&
+                                      x.XmlAutorizado != ""
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (nota == null)
+        {
+            return NotFound(new
+            {
+                mensagem = "Solicitação não encontrada."
+            });
+        }
+
+        var agora = DateTime.UtcNow;
+
+        var tempoProcessamentoSegundos =
+            nota.ReservadaEm.HasValue
+                ? (double?)(agora - nota.ReservadaEm.Value).TotalSeconds
+                : null;
+
+        var processamentoTravado =
+            nota.Status == "EM_PROCESSAMENTO" &&
+            tempoProcessamentoSegundos >= 60;
+
+        var possuiResultado =
+            nota.CStat.HasValue ||
+            !string.IsNullOrWhiteSpace(nota.Protocolo) ||
+            !string.IsNullOrWhiteSpace(nota.ChaveAcesso) ||
+            nota.possuiXmlRetorno ||
+            nota.possuiXmlAutorizado;
+
+        return Ok(new
+        {
+            solicitacaoId = nota.Id,
+            numero = nota.Numero,
+            serie = nota.Serie,
+            status = nota.Status,
+            agenteFiscalId = nota.AgenteFiscalId,
+            reservadaEm = nota.ReservadaEm,
+            recebidaPeloAgenteEm = nota.RecebidaPeloAgenteEm,
+            tempoProcessamentoSegundos,
+            processamentoTravado,
+            possuiResultado,
+            cStat = nota.CStat,
+            protocoloInformado =
+                !string.IsNullOrWhiteSpace(nota.Protocolo),
+            chaveAcessoInformada =
+                !string.IsNullOrWhiteSpace(nota.ChaveAcesso),
+            nota.possuiXmlRetorno,
+            nota.possuiXmlAutorizado,
+            requerConciliacao = processamentoTravado,
+            recuperacaoAutomaticaPermitida = false,
+            mensagem = processamentoTravado
+                ? "Solicitação travada. É necessária conciliação antes de qualquer reenvio."
+                : "Pré-verificação concluída. Nenhuma alteração realizada."
+        });
+    }
+
+
+    [AllowAnonymous]
+    [HttpPost("{agenteId:guid}/emissoes/{solicitacaoId:guid}/confirmar-recebimento")]
+    public async Task<IActionResult> ConfirmarRecebimento(
+    Guid agenteId,
+    Guid solicitacaoId,
+    CancellationToken cancellationToken)
+    {
+        var credencial = Request.Headers["X-Agent-Credential"].ToString();
+
+        if (string.IsNullOrWhiteSpace(credencial))
+            return Unauthorized("Credencial não informada.");
+
+        var agente = await _context.AgentesFiscais
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                x => x.Id == agenteId && x.Ativo,
+                cancellationToken);
+
+        if (agente == null)
+            return Unauthorized("Agente não encontrado ou inativo.");
+
+        byte[] hashArmazenado;
+
+        try
+        {
+            hashArmazenado = Convert.FromHexString(agente.CredencialHash);
+        }
+        catch (FormatException)
+        {
+            return Unauthorized("Credencial inválida.");
+        }
+
+        var hashRecebido = Convert.FromHexString(GerarHash(credencial));
+
+        if (hashRecebido.Length != hashArmazenado.Length ||
+            !CryptographicOperations.FixedTimeEquals(
+                hashRecebido, hashArmazenado))
+        {
+            return Unauthorized("Credencial inválida.");
+        }
+
+        var nota = await _context.NotasFiscais
+            .FirstOrDefaultAsync(x =>
+                x.Id == solicitacaoId &&
+                x.EmpresaId == agente.EmpresaId &&
+                x.AgenteFiscalId == agenteId,
+                cancellationToken);
+
+        if (nota == null)
+            return NotFound("Solicitação não encontrada para este Agent.");
+
+        if (nota.Status != "EM_PROCESSAMENTO")
+            return Conflict("Solicitação não está em processamento.");
+
+        var agora = DateTime.UtcNow;
+
+        // Confirmação idempotente: chamadas repetidas não alteram a primeira data.
+        if (nota.RecebidaPeloAgenteEm == null)
+        {
+            nota.RecebidaPeloAgenteEm = agora;
+            nota.AtualizadoEm = agora;
+
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        return Ok(new
+        {
+            solicitacaoId = nota.Id,
+            numero = nota.Numero,
+            recebimentoConfirmado = true,
+            confirmadoEm = DateTime.UtcNow
+        });
+    }
 }
 
 public class VincularAgenteRequest

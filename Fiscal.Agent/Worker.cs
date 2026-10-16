@@ -31,8 +31,7 @@ public class Worker : BackgroundService
         _emissaoService = emissaoService;
     }
 
-    protected override async Task ExecuteAsync(
-        CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
         {
@@ -267,6 +266,10 @@ public class Worker : BackgroundService
                         };
                         SalvarEstado(estado);
 
+                        // Confirma à Fiscal.API que a solicitação foi registrada localmente.
+                        await _fiscalApiClient.ConfirmarRecebimentoAsync(agenteId, credencial, solicitacao.Id, stoppingToken);
+                        Console.WriteLine($"Recebimento da NFC-e {solicitacao.Numero} confirmado na Fiscal.API.");
+
                         try
                         {
                             var retorno = _emissaoService.Emitir(
@@ -382,5 +385,32 @@ public class Worker : BackgroundService
         }
 
         return senha;
+    }
+
+    private void TrocarCertificado()
+    {
+        Console.Write("Caminho do novo certificado PFX: ");
+        var caminho = Console.ReadLine()?.Trim().Trim('"');
+
+        if (string.IsNullOrWhiteSpace(caminho))
+            throw new Exception("Caminho do certificado não informado.");
+
+        Console.Write("Senha do novo certificado: ");
+        var senha = LerSenha();
+
+        // Valida antes de substituir o certificado atual
+        var certificado = _certificadoService.LerCertificado(
+            caminho, senha);
+
+        if (!certificado.PossuiChavePrivada)
+            throw new Exception("Certificado sem chave privada.");
+
+        _configuracaoLocalService.SalvarCertificado(
+            caminho, senha);
+
+        Console.WriteLine();
+        Console.WriteLine("Certificado atualizado com sucesso!");
+        Console.WriteLine($"Titular: {certificado.Titular}");
+        Console.WriteLine($"Validade: {certificado.ValidoAte:dd/MM/yyyy}");
     }
 }

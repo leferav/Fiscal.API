@@ -49,4 +49,5 @@ public class NotaFiscal
     public Guid? AgenteFiscalId { get; set; }
 
     public DateTime? ReservadaEm { get; set; }
+    public DateTime? RecebidaPeloAgenteEm { get; set; }
 }

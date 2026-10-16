@@ -99,6 +99,26 @@ public class FiscalApiClient
             cancellationToken: ct);
     }
 
+    public async Task ConfirmarRecebimentoAsync(Guid agenteId, string credencial, Guid solicitacaoId, CancellationToken ct = default)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"api/agentes/{agenteId}/emissoes/{solicitacaoId}/confirmar-recebimento");
+
+        request.Headers.Add("X-Agent-Credential", credencial);
+
+        using var response = await _httpClient.SendAsync(request, ct);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var detalhe = await response.Content.ReadAsStringAsync(ct);
+
+            throw new HttpRequestException(
+                $"Erro ao confirmar recebimento da NFC-e. " +
+                $"HTTP {(int)response.StatusCode}: {detalhe}");
+        }
+    }
+
     public async Task EnviarResultadoEmissaoAsync(
         Guid agenteId, string credencial, Guid solicitacaoId,
         ResultadoEmissaoAgent resultado, CancellationToken ct = default)

@@ -38,6 +38,8 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClient<NcmService>();
 builder.Services.AddHttpClient();
 
+builder.Services.AddHostedService<MonitoramentoEmissoesService>();
+
 // ============================================================
 // JWT / AUTENTICAÇÃO
 // ============================================================
