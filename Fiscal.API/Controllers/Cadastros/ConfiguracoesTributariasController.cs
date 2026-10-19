@@ -170,7 +170,7 @@ namespace Fiscal.API.Controllers.Cadastros
             var erroValidacao =
                 ValidarConfiguracaoTributaria(request);
 
-            if (erroValidacao is not null)  
+            if (erroValidacao is not null)
             {
                 return erroValidacao;
             }

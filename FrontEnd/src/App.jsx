@@ -11,6 +11,7 @@ import NotaFiscalDetalhes from "./pages/NotasFiscais/NotaFiscalDetalhes";
 import Vendas from "./pages/Vendas/Vendas";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import Empresa from "./pages/Empresa/Empresa";
+import Configuracoes from "./pages/Configuracoes/Configuracoes";
 import { estaAutenticado, logout, } from "./services/authService";
 import Configuracoes from "./pages/Configuracoes/Configuracoes";
 

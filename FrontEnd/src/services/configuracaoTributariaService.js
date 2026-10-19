@@ -1,3 +1,4 @@
+
 import { apiRequestAutenticado } from "./apiClient";
 
 export async function obterConfiguracoesTributarias() {

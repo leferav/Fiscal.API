@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { obterMinhaConfiguracaoFiscal, atualizarMinhaConfiguracaoFiscal, } from "../../services/configuracaoFiscalService";
 import { obterConfiguracoesTributarias, cadastrarConfiguracaoTributaria, atualizarConfiguracaoTributaria, desativarConfiguracaoTributaria} from "../../services/configuracaoTributariaService";
 import ConfiguracaoTributariaModal from "./ConfiguracaoTributariaModal";
-import FiscalAgent from "./FiscalAgent";
-import CertificadoDigital from "./CertificadoDigital";
 import "./Configuracoes.css";
 
 const formularioInicial = {
@@ -563,11 +561,6 @@ export default function Configuracoes() {
             </div>
         </form>
 
-        {/* FISCAL.AGENT */}
-        <FiscalAgent />
-
-        {/* CERTIFICADO DIGITAL */}
-        <CertificadoDigital />
 
 
         {/* CONFIGURAÇÕES TRIBUTÁRIAS */}

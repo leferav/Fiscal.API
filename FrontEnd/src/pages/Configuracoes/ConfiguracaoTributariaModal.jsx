@@ -198,7 +198,7 @@ export default function ConfiguracaoTributariaModal({
                     value={form.cstIcms}
                     onChange={alterarCampo}
                     placeholder="Ex.: 00"
-                    maxLength={3}
+                    maxLength={2}
                     />
                 </div>
 
@@ -222,7 +222,7 @@ export default function ConfiguracaoTributariaModal({
                     name="aliquotaIcms"
                     value={form.aliquotaIcms}
                     onChange={alterarCampo}
-                    placeholder="Ex.: 17,00"
+                    placeholder="Ex.: 17.00"
                     min="0"
                     max="100"
                     step="0.01"
