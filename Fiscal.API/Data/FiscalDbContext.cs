@@ -11,14 +11,10 @@ public class FiscalDbContext : DbContext
     public DbSet<Empresa> Empresas => Set<Empresa>();
     public DbSet<ConfiguracaoFiscal> ConfiguracoesFiscais => Set<ConfiguracaoFiscal>();
     public DbSet<NotaFiscal> NotasFiscais => Set<NotaFiscal>();
-    public DbSet<SolicitacaoEmissao> SolicitacoesEmissao => Set<SolicitacaoEmissao>();
     public DbSet<ConfiguracaoTributaria> ConfiguracoesTributarias => Set<ConfiguracaoTributaria>();
     public DbSet<Produto> Produtos => Set<Produto>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Ncm> Ncms => Set<Ncm>();
-    public DbSet<CertificadoDigital> CertificadosDigitais => Set<CertificadoDigital>();
-    public DbSet<AgenteFiscal> AgentesFiscais => Set<AgenteFiscal>();
-    public DbSet<VinculacaoAgenteFiscal> VinculacoesAgentesFiscais => Set<VinculacaoAgenteFiscal>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -26,11 +22,7 @@ public class FiscalDbContext : DbContext
 
         ConfigurarEmpresa(modelBuilder);
         ConfigurarConfiguracaoFiscal(modelBuilder);
-        ConfigurarCertificadoDigital(modelBuilder);
-        ConfigurarAgenteFiscal(modelBuilder);
-        ConfigurarVinculacaoAgenteFiscal(modelBuilder);
         ConfigurarNotaFiscal(modelBuilder);
-        ConfigurarSolicitacaoEmissao(modelBuilder);
         ConfigurarConfiguracaoTributaria(modelBuilder);
         ConfigurarProduto(modelBuilder);
         ConfigurarNcm(modelBuilder);    
@@ -89,97 +81,6 @@ public class FiscalDbContext : DbContext
             .HasMaxLength(10);
     }
 
-    private static void ConfigurarCertificadoDigital(ModelBuilder modelBuilder)
-    {
-        var entity = modelBuilder.Entity<CertificadoDigital>();
-
-        entity.ToTable("certificados_digitais");
-
-        entity.HasKey(x => x.Id);
-
-        entity.HasIndex(x => x.EmpresaId)
-            .IsUnique();
-
-        entity.Property(x => x.TipoArmazenamento)
-            .IsRequired();
-
-        entity.Property(x => x.Titular)
-            .HasMaxLength(200);
-
-        entity.Property(x => x.Cnpj)
-            .HasMaxLength(14);
-
-        entity.Property(x => x.Emissor)
-            .HasMaxLength(200);
-
-        entity.Property(x => x.Thumbprint)
-            .HasMaxLength(100);
-
-        entity.HasOne(x => x.Empresa)
-            .WithOne(x => x.CertificadoDigital)
-            .HasForeignKey<CertificadoDigital>(x => x.EmpresaId)
-            .OnDelete(DeleteBehavior.Cascade);
-    }
-
-    private static void ConfigurarAgenteFiscal(ModelBuilder modelBuilder)
-    {
-        var entity = modelBuilder.Entity<AgenteFiscal>();
-
-        entity.ToTable("agentes_fiscais");
-
-        entity.HasKey(x => x.Id);
-
-        entity.Property(x => x.Nome)
-            .HasMaxLength(150)
-            .IsRequired();
-
-        entity.Property(x => x.IdentificadorMaquina)
-            .HasMaxLength(200);
-
-        entity.Property(x => x.CredencialHash)
-            .HasMaxLength(64)
-            .IsRequired();
-
-        entity.HasIndex(x => x.EmpresaId);
-
-        entity.HasIndex(x => new
-        {
-            x.EmpresaId,
-            x.IdentificadorMaquina
-        })
-        .IsUnique();
-
-        entity.HasOne(x => x.Empresa)
-            .WithMany(x => x.AgentesFiscais)
-            .HasForeignKey(x => x.EmpresaId)
-            .OnDelete(DeleteBehavior.Cascade);
-    }
-
-    private static void ConfigurarVinculacaoAgenteFiscal(ModelBuilder modelBuilder)
-    {
-        var entity =
-            modelBuilder.Entity<VinculacaoAgenteFiscal>();
-
-        entity.ToTable("vinculacoes_agentes_fiscais");
-
-        entity.HasKey(x => x.Id);
-
-        entity.Property(x => x.CodigoHash)
-            .HasMaxLength(64)
-            .IsRequired();
-
-        entity.HasIndex(x => x.CodigoHash);
-
-        entity.HasIndex(x => x.EmpresaId);
-
-        entity.HasIndex(x => x.ExpiraEm);
-
-        entity.HasOne(x => x.Empresa)
-            .WithMany(x => x.VinculacoesAgentesFiscais)
-            .HasForeignKey(x => x.EmpresaId)
-            .OnDelete(DeleteBehavior.Cascade);
-    }
-
     private static void ConfigurarNotaFiscal(ModelBuilder modelBuilder)
     {
         var entity = modelBuilder.Entity<NotaFiscal>();
@@ -223,68 +124,6 @@ public class FiscalDbContext : DbContext
         entity.HasOne(x => x.Empresa)
             .WithMany(x => x.NotasFiscais)
             .HasForeignKey(x => x.EmpresaId);
-    }
-
-    private static void ConfigurarSolicitacaoEmissao(ModelBuilder modelBuilder)
-    {
-        var entity = modelBuilder.Entity<SolicitacaoEmissao>();
-
-        entity.ToTable("solicitacoes_emissao");
-
-        entity.HasKey(x => x.Id);
-
-        entity.Property(x => x.Status)
-            .HasMaxLength(30)
-            .IsRequired();
-
-        entity.Property(x => x.PayloadJson)
-            .HasColumnType("jsonb")
-            .IsRequired();
-
-        entity.Property(x => x.ChaveAcesso)
-            .HasMaxLength(44);
-
-        entity.Property(x => x.Protocolo)
-            .HasMaxLength(30);
-
-        entity.Property(x => x.XMotivo)
-            .HasMaxLength(500);
-
-        entity.Property(x => x.Erro)
-            .HasColumnType("text");
-
-        entity.Property(x => x.XmlAutorizado)
-            .HasColumnType("text");
-
-        entity.HasIndex(x => new
-        {
-            x.EmpresaId,
-            x.Status,
-            x.CriadoEm
-        });
-
-        entity.HasIndex(x => x.AgenteId);
-
-        entity.HasIndex(x => x.NotaFiscalId);
-
-        entity.HasIndex(x => new
-        {
-            x.EmpresaId,
-            x.Ambiente,
-            x.Modelo,
-            x.Serie,
-            x.Numero
-        }).IsUnique();
-
-        entity.HasOne<Empresa>()
-            .WithMany()
-            .HasForeignKey(x => x.EmpresaId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        entity.HasOne<AgenteFiscal>()
-            .WithMany()
-            .HasForeignKey(x => x.AgenteId)
-            .OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigurarConfiguracaoTributaria(ModelBuilder modelBuilder)

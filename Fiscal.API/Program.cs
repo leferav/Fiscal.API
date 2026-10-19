@@ -38,10 +38,6 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClient<NcmService>();
 builder.Services.AddHttpClient();
 
-builder.Services.AddScoped<NFCeXmlPreparacaoService>();
-builder.Services.AddScoped<NumeracaoNFCeService>();
-builder.Services.AddScoped<SolicitacaoEmissaoNFCeService>();
-
 // ============================================================
 // JWT / AUTENTICAÇÃO
 // ============================================================
