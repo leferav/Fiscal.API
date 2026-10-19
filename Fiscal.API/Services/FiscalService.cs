@@ -276,10 +276,32 @@ namespace Fiscal.API.Services
                     request.Destinatario
                 );
 
-
             var configuracao = _configFactory.Criar();
 
             configuracao.ModeloDocumento = ModeloDocumento.NFCe;
+
+            // Validação preventiva da data de emissão
+            var dataEmissao = nfce.infNFe.ide.dhEmi;
+            var agora = DateTimeOffset.UtcNow;
+
+            var diferenca = agora - dataEmissao.ToUniversalTime();
+
+            if (diferenca > TimeSpan.FromMinutes(4))
+            {
+                throw new InvalidOperationException(
+                    $"A data de emissão da NFC-e está atrasada em " +
+                    $"{diferenca.TotalMinutes:F1} minutos. " +
+                    "Verifique o relógio do servidor."
+                );
+            }
+
+            if (diferenca < TimeSpan.FromMinutes(-1))
+            {
+                throw new InvalidOperationException(
+                    "A data de emissão da NFC-e está adiantada. " +
+                    "Verifique o relógio do servidor."
+                );
+            }
 
             // Primeiro assina
             nfce.Assina(configuracao);
