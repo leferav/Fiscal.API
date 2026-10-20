@@ -42,9 +42,11 @@ export async function apiRequestAutenticado(
   const token = obterToken();
 
   const headers = {
-    ...(options.body
-      ? { "Content-Type": "application/json" }
-      : {}),
+    ...(options.body instanceof FormData
+      ? {}
+      : options.body
+        ? { "Content-Type": "application/json" }
+        : {}),
     ...(token
       ? { Authorization: `Bearer ${token}` }
       : {}),

@@ -1,4 +1,6 @@
-﻿namespace Fiscal.API.Models.Database;
+﻿using DFe.Utils.Assinatura;
+
+namespace Fiscal.API.Models.Database;
 
 public class Empresa
 {
@@ -38,4 +40,6 @@ public class Empresa
     public ICollection<Produto> Produtos { get; set; } = new List<Produto>();
 
     public ICollection<Usuario> Usuarios { get; set; } = new List<Usuario>();
+
+    public CertificadoDigital? CertificadoDigital { get; set; }
 }

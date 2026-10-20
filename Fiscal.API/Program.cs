@@ -1,5 +1,6 @@
 using Fiscal.API.Data;
 using Fiscal.API.Services;
+using Fiscal.API.Services.CertificadoDigital;
 using Fiscal.API.Services.NFCe;
 using Fiscal.API.Services.NFe;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -90,6 +91,8 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<FiscalService>();
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddSingleton<CertificadoCriptografiaService>();
+builder.Services.AddScoped<CertificadoDigitalService>();
 
 builder.Services.AddScoped<ZeusConfigurationFactory>();
 builder.Services.AddScoped<NFeBuilder>();

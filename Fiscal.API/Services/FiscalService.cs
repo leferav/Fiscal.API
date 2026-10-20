@@ -2,12 +2,16 @@
 using Fiscal.API.Data;
 using Fiscal.API.Models.Database;
 using Fiscal.API.Models.NFe;
+using Fiscal.API.Services.CertificadoDigital;
 using Fiscal.API.Services.NFCe;
 using Fiscal.API.Services.NFe;
 using Microsoft.EntityFrameworkCore;
+using NFe.Classes;
 using NFe.Classes.Servicos.Tipos;
 using NFe.Servicos;
+using NFe.Servicos.Retorno;
 using NFe.Utils;
+using NFe.Utils.Enderecos;
 using NFe.Utils.InformacoesSuplementares;
 using NFe.Utils.NFe;
 
@@ -20,19 +24,22 @@ namespace Fiscal.API.Services
         private readonly NFCeBuilder _nfceBuilder;
         private readonly NFeXmlService _nfeXmlService;
         private readonly FiscalDbContext _context;
+        private readonly CertificadoDigitalService _certificadoDigitalService;
 
         public FiscalService(
             ZeusConfigurationFactory configFactory,
             NFeBuilder nfeBuilder,
             NFeXmlService nfeXmlService,
             NFCeBuilder nfceBuilder,
-            FiscalDbContext context)
+            FiscalDbContext context,
+            CertificadoDigitalService certificadoDigitalService)
         {
             _configFactory = configFactory;
             _nfeBuilder = nfeBuilder;
             _nfeXmlService = nfeXmlService;
             _nfceBuilder = nfceBuilder;
             _context = context;
+            _certificadoDigitalService = certificadoDigitalService;
         }
 
         #region NF-e
@@ -88,15 +95,26 @@ namespace Fiscal.API.Services
             // Lote de teste
             var idLote = 1;
 
-            var retorno = servicoNFe.NFeAutorizacao(
-                idLote,
-                IndicadorSincronizacao.Sincrono,
-                new List<global::NFe.Classes.NFe>
-                {
-                nfe
-                },
-                false
-            );
+            RetornoNFeAutorizacao retorno;
+
+            try
+            {
+                retorno = servicoNFe.NFeAutorizacao(
+                    idLote,
+                    IndicadorSincronizacao.Sincrono,
+                    new List<global::NFe.Classes.NFe> { nfe },
+                    false);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    "ERRO COMPLETO SEFAZ: " + ex.ToString());
+
+                System.Diagnostics.Debug.WriteLine(
+                    "CAUSA PRINCIPAL: " + ex.GetBaseException().Message);
+
+                throw;
+            }
 
             var retEnviNFe = retorno.Retorno;
 
@@ -155,6 +173,7 @@ namespace Fiscal.API.Services
 
         #region NFC-e
 
+
         public async Task<object> AutorizarNFCeAsync(EmitirNFeRequest request)
         {
             var empresa = await _context.Empresas
@@ -172,284 +191,397 @@ namespace Fiscal.API.Services
                 throw new Exception(
                     "Empresa não possui configuração fiscal.");
 
-
             var configuracaoFiscal = empresa.ConfiguracaoFiscal;
+
+            var numeroAtual = configuracaoFiscal.ProximoNumeroNFCe;
+
+            var existeTentativa = await _context.NotasFiscais
+                .AsNoTracking()
+                .AnyAsync(n =>
+                    n.EmpresaId == empresa.Id &&
+                    n.Modelo == 65 &&
+                    n.Serie == configuracaoFiscal.SerieNFCe &&
+                    n.Numero == numeroAtual);
+
+            if (existeTentativa)
+            {
+                throw new InvalidOperationException(
+                    $"A NFC-e {numeroAtual} já possui um registro de emissão. " +
+                    "Verifique a situação fiscal antes de reutilizar esse número.");
+            }
 
             if (request.Produtos == null || request.Produtos.Count == 0)
             {
-                throw new Exception(
-                    "Informe pelo menos um produto."
-                );
+                throw new Exception("Informe pelo menos um produto.");
             }
 
             // IDs dos produtos recebidos pelo PDV
             var produtoIds = request.Produtos
-                    .Select(x => x.ProdutoId)
-                    .Distinct()
-                    .ToList();
+                .Select(x => x.ProdutoId)
+                .Distinct()
+                .ToList();
 
             // Carrega produtos + configuração tributária
-            var produtosCadastrados =
-                await _context.Produtos
-                    .AsNoTracking()
-                    .Include(x => x.ConfiguracaoTributaria)
-                    .Where(x =>
-                        produtoIds.Contains(x.Id) &&
-                        x.EmpresaId == empresa.Id &&
-                        x.Ativo)
-                    .ToListAsync();
+            var produtosCadastrados = await _context.Produtos
+                .AsNoTracking()
+                .Include(x => x.ConfiguracaoTributaria)
+                .Where(x =>
+                    produtoIds.Contains(x.Id) &&
+                    x.EmpresaId == empresa.Id &&
+                    x.Ativo)
+                .ToListAsync();
 
-            // Monta os itens fiscais internos
             var itensFiscais = new List<ItemFiscal>();
 
             foreach (var itemRequest in request.Produtos)
             {
                 if (itemRequest.ProdutoId == Guid.Empty)
-                {
-                    throw new Exception(
-                        "ProdutoId não informado."
-                    );
-                }
+                    throw new Exception("ProdutoId não informado.");
 
                 if (itemRequest.Quantidade <= 0)
-                {
                     throw new Exception(
-                        "A quantidade deve ser maior que zero."
-                    );
-                }
+                        "A quantidade deve ser maior que zero.");
 
-                var produto = produtosCadastrados.FirstOrDefault(x => x.Id == itemRequest.ProdutoId);
+                var produto = produtosCadastrados
+                    .FirstOrDefault(x => x.Id == itemRequest.ProdutoId);
 
                 if (produto == null)
                 {
                     throw new Exception(
                         $"Produto {itemRequest.ProdutoId} não encontrado, " +
-                        $"inativo ou pertencente a outra empresa."
-                    );
+                        "inativo ou pertencente a outra empresa.");
                 }
 
                 if (produto.ValorVenda <= 0)
                 {
                     throw new Exception(
-                        $"O produto {produto.Codigo} não possui valor de venda válido."
-                    );
+                        $"O produto {produto.Codigo} não possui valor de venda válido.");
                 }
-
 
                 if (produto.ConfiguracaoTributaria == null)
                 {
                     throw new Exception(
-                        $"Produto {produto.Codigo} não possui " +
-                        $"configuração tributária."
-                    );
+                        $"Produto {produto.Codigo} não possui configuração tributária.");
                 }
 
                 if (!produto.ConfiguracaoTributaria.Ativo)
                 {
                     throw new Exception(
-                        $"A configuração tributária do produto " +
-                        $"{produto.Codigo} está inativa."
-                    );
+                        $"A configuração tributária do produto {produto.Codigo} está inativa.");
                 }
 
-                itensFiscais.Add(
-                    new ItemFiscal
-                    {
-                        ProdutoId = produto.Id,
-                        Codigo = produto.Codigo,
-                        Descricao = produto.Descricao,
-                        Ncm = produto.Ncm,
-                        Unidade = produto.Unidade,
-                        Quantidade = itemRequest.Quantidade,
-                        ValorUnitario = produto.ValorVenda,
-                        ConfiguracaoTributaria = produto.ConfiguracaoTributaria
-                    }
-                );
+                itensFiscais.Add(new ItemFiscal
+                {
+                    ProdutoId = produto.Id,
+                    Codigo = produto.Codigo,
+                    Descricao = produto.Descricao,
+                    Ncm = produto.Ncm,
+                    Unidade = produto.Unidade,
+                    Quantidade = itemRequest.Quantidade,
+                    ValorUnitario = produto.ValorVenda,
+                    ConfiguracaoTributaria = produto.ConfiguracaoTributaria
+                });
             }
 
             // Monta a NFC-e
-            var nfce =
-                _nfceBuilder.Criar(
-                    itensFiscais,
-                    empresa,
-                    configuracaoFiscal,
-                    request.Destinatario
-                );
+            var nfce = _nfceBuilder.Criar(
+                itensFiscais,
+                empresa,
+                configuracaoFiscal,
+                request.Destinatario);
 
-            var configuracao = _configFactory.Criar();
+            // Recupera o certificado criptografado do Aiven
+            var dadosCertificado = await _certificadoDigitalService
+                .ObterCertificadoAsync(empresa.Id);
 
-            configuracao.ModeloDocumento = ModeloDocumento.NFCe;
-
-            // Validação preventiva da data de emissão
-            var dataEmissao = nfce.infNFe.ide.dhEmi;
-            var agora = DateTimeOffset.UtcNow;
-
-            var diferenca = agora - dataEmissao.ToUniversalTime();
-
-            if (diferenca > TimeSpan.FromMinutes(4))
+            try
             {
-                throw new InvalidOperationException(
-                    $"A data de emissão da NFC-e está atrasada em " +
-                    $"{diferenca.TotalMinutes:F1} minutos. " +
-                    "Verifique o relógio do servidor."
-                );
-            }
+                // Configura o Zeus com o certificado A1 em memória
+                var configuracao = _configFactory
+                    .CriarComCertificadoEmMemoria(
+                        dadosCertificado.Pfx,
+                        dadosCertificado.Senha);
 
-            if (diferenca < TimeSpan.FromMinutes(-1))
-            {
-                throw new InvalidOperationException(
-                    "A data de emissão da NFC-e está adiantada. " +
-                    "Verifique o relógio do servidor."
-                );
-            }
+                configuracao.ModeloDocumento = ModeloDocumento.NFCe;
 
-            // Primeiro assina
-            nfce.Assina(configuracao);
+                string urlAutorizacao = Enderecador.ObterUrlServico(
+                    ServicoNFe.NFeAutorizacao,
+                    configuracao);
 
-            // Depois gera informações suplementares da NFC-e
-            var idCsc = configuracaoFiscal.CscId;
-            var csc = configuracaoFiscal.Csc;
+                System.Diagnostics.Debug.WriteLine(
+                    $"URL SEFAZ NFC-e: {urlAutorizacao}");
 
-            nfce.infNFeSupl = new global::NFe.Classes.infNFeSupl();
-            nfce.infNFeSupl.urlChave = nfce.infNFeSupl.ObterUrlConsulta(nfce, VersaoQrCode.QrCodeVersao3);
-            nfce.infNFeSupl.qrCode = nfce.infNFeSupl.ObterUrlQrCode(nfce, VersaoQrCode.QrCodeVersao3, idCsc, csc, configuracao.Certificado);
+                // Validação preventiva da data de emissão
+                var dataEmissao = nfce.infNFe.ide.dhEmi;
+                var agora = DateTimeOffset.UtcNow;
 
-            // Valida o XML completo
-            nfce.Valida(configuracao);
+                var diferenca = agora - dataEmissao.ToUniversalTime();
 
-            var xmlNfce = nfce.ObterXmlString();
-
-
-
-            var caminhoXml = Path.Combine(
-                AppContext.BaseDirectory,
-                $"nfce-{configuracaoFiscal.ProximoNumeroNFCe}.xml"
-);
-
-            File.WriteAllText(
-                caminhoXml,
-                xmlNfce,
-                new System.Text.UTF8Encoding(false)
-            );
-
-            Console.WriteLine($"XML salvo em: {caminhoXml}");
-
-
-
-            using var servicoNFe = new ServicosNFe(configuracao);
-
-            var idLote = 1;
-
-            var retorno = servicoNFe.NFeAutorizacao(
-                idLote,
-                IndicadorSincronizacao.Sincrono,
-                new List<global::NFe.Classes.NFe>
+                if (diferenca > TimeSpan.FromMinutes(4))
                 {
-            nfce
-                },
-                false
-            );
+                    throw new InvalidOperationException(
+                        $"A data de emissão da NFC-e está atrasada em " +
+                        $"{diferenca.TotalMinutes:F1} minutos. " +
+                        "Verifique o relógio do servidor.");
+                }
 
-            var retEnviNFe = retorno.Retorno;
-            var protocolo = retEnviNFe.protNFe;
-
-            var autorizada = protocolo?.infProt?.cStat == 100;
-
-            string? xmlAutorizado = null;
-
-            if (autorizada && protocolo != null)
-            {
-                var proc = new global::NFe.Classes.nfeProc
+                if (diferenca < TimeSpan.FromMinutes(-1))
                 {
-                    versao = "4.00",
-                    NFe = nfce,
-                    protNFe = protocolo
+                    throw new InvalidOperationException(
+                        "A data de emissão da NFC-e está adiantada. " +
+                        "Verifique o relógio do servidor.");
+                }
+
+                // Assina a NFC-e
+                nfce.Assina(configuracao);
+
+                // Gera as informações suplementares e QR Code
+                var idCsc = configuracaoFiscal.CscId;
+                var csc = configuracaoFiscal.Csc;
+
+                nfce.infNFeSupl = new global::NFe.Classes.infNFeSupl();
+
+                nfce.infNFeSupl.urlChave =
+                    nfce.infNFeSupl.ObterUrlConsulta(
+                        nfce,
+                        VersaoQrCode.QrCodeVersao3);
+
+                nfce.infNFeSupl.qrCode =
+                    nfce.infNFeSupl.ObterUrlQrCode(
+                        nfce,
+                        VersaoQrCode.QrCodeVersao3,
+                        idCsc,
+                        csc,
+                        configuracao.Certificado);
+
+                // Valida o XML completo
+                nfce.Valida(configuracao);
+
+                var xmlNfce = nfce.ObterXmlString();
+
+                // Salva uma cópia do XML para diagnóstico
+                var caminhoXml = Path.Combine(
+                    AppContext.BaseDirectory,
+                    $"nfce-{configuracaoFiscal.ProximoNumeroNFCe}.xml");
+
+                File.WriteAllText(
+                    caminhoXml,
+                    xmlNfce,
+                    new System.Text.UTF8Encoding(false));
+
+                Console.WriteLine($"XML salvo em: {caminhoXml}");
+
+                // Registra a tentativa de transmissão antes de chamar a SEFAZ.
+                var tentativa = new NotaFiscal
+                {
+                    Id = Guid.NewGuid(),
+                    EmpresaId = empresa.Id,
+                    Modelo = 65,
+                    Serie = nfce.infNFe.ide.serie,
+                    Numero = nfce.infNFe.ide.nNF,
+                    ChaveAcesso = nfce.infNFe.Id?.Replace("NFe", ""),
+                    Ambiente = (short)configuracaoFiscal.Ambiente,
+                    Status = "PENDENTE_TRANSMISSAO",
+                    ValorProdutos = nfce.infNFe.total.ICMSTot.vProd,
+                    ValorTotal = nfce.infNFe.total.ICMSTot.vNF,
+                    XmlEnvio = xmlNfce,
+                    CriadoEm = DateTime.UtcNow
                 };
 
-                xmlAutorizado = proc.ObterXmlString();
-            }
+                _context.NotasFiscais.Add(tentativa);
 
-            var notaFiscal = new NotaFiscal
-            {
-                Id = Guid.NewGuid(),
-                EmpresaId = empresa.Id,
-                Modelo = 65,
-                Serie = nfce.infNFe.ide.serie,
-                Numero = nfce.infNFe.ide.nNF,
-                ChaveAcesso = protocolo?.infProt?.chNFe ?? nfce.infNFe.Id?.Replace("NFe", ""),
-                Ambiente = (short)configuracaoFiscal.Ambiente,
-                Status = autorizada
+                await _context.SaveChangesAsync();
+
+                // Transmite à SEFAZ
+                using var servicoNFe = new ServicosNFe(configuracao);
+
+                var idLote = 1;
+
+                RetornoNFeAutorizacao retorno;
+
+                try
+                {
+                    retorno = servicoNFe.NFeAutorizacao(
+                        idLote,
+                        IndicadorSincronizacao.Sincrono,
+                        new List<global::NFe.Classes.NFe> { nfce },
+                        false);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        "ERRO COMPLETO SEFAZ: " + ex);
+
+                    System.Diagnostics.Debug.WriteLine(
+                        "CAUSA PRINCIPAL SSL: " + ex.GetBaseException());
+
+                    throw;
+                }
+
+                var retEnviNFe = retorno.Retorno;
+                var protocolo = retEnviNFe.protNFe;
+
+                var autorizada = protocolo?.infProt?.cStat == 100;
+
+                var codigoRetorno = protocolo?.infProt?.cStat
+                    ?? retEnviNFe.cStat;
+
+                var rejeicaoConfirmada =
+                    protocolo?.infProt != null &&
+                    codigoRetorno != 100 &&
+                    codigoRetorno != 150;
+
+                string? xmlAutorizado = null;
+
+                if (autorizada && protocolo != null)
+                {
+                    var proc = new global::NFe.Classes.nfeProc
+                    {
+                        versao = "4.00",
+                        NFe = nfce,
+                        protNFe = protocolo
+                    };
+
+                    xmlAutorizado = proc.ObterXmlString();
+                }
+
+                // Registra o resultado da emissão
+                // Atualiza a tentativa registrada antes da transmissão
+                tentativa.Status = autorizada
                     ? "AUTORIZADA"
-                    : "REJEITADA",
-                Protocolo = protocolo?.infProt?.nProt,
-                CStat = protocolo?.infProt?.cStat
-                        ?? retEnviNFe.cStat,
-                XMotivo = protocolo?.infProt?.xMotivo
-                          ?? retEnviNFe.xMotivo,
-                ValorProdutos = nfce.infNFe.total.ICMSTot.vProd,
-                ValorTotal = nfce.infNFe.total.ICMSTot.vNF,
-                XmlEnvio = xmlNfce,
-                XmlRetorno = retorno.RetornoStr,
-                XmlAutorizado = xmlAutorizado,
-                CriadoEm = DateTime.UtcNow,
-                AutorizadoEm = autorizada
+                    : rejeicaoConfirmada
+                        ? "REJEITADA"
+                        : "PENDENTE_TRANSMISSAO";
+
+                tentativa.Protocolo = protocolo?.infProt?.nProt;
+
+                tentativa.CStat = protocolo?.infProt?.cStat
+                    ?? retEnviNFe.cStat;
+
+                tentativa.XMotivo = protocolo?.infProt?.xMotivo
+                    ?? retEnviNFe.xMotivo;
+
+                tentativa.XmlRetorno = retorno.RetornoStr;
+                tentativa.XmlAutorizado = xmlAutorizado;
+
+                tentativa.AutorizadoEm = autorizada
                     ? DateTime.UtcNow
-                    : null
-            };
+                    : null;
 
-            _context.NotasFiscais.Add(notaFiscal);
+                // Avança a numeração após a tentativa de transmissão
+                if (autorizada)
+                {
+                    configuracaoFiscal.ProximoNumeroNFCe++;
+                }
 
-            // O número da NFC-e já foi utilizado em uma tentativa de transmissão.
-            // Avança independentemente de autorização ou rejeição para não reutilizá-lo.
-            configuracaoFiscal.ProximoNumeroNFCe++;
+                await _context.SaveChangesAsync();
 
-            await _context.SaveChangesAsync();
-
-            return new
+                return new
+                {
+                    sucesso = autorizada,
+                    ambiente = configuracao.tpAmb.ToString(),
+                    modelo = "NFC-e 65",
+                    chave =
+                        protocolo?.infProt?.chNFe ??
+                        nfce.infNFe.Id?.Replace("NFe", ""),
+                    cStatLote = retEnviNFe.cStat,
+                    motivoLote = retEnviNFe.xMotivo,
+                    cStat = protocolo?.infProt?.cStat,
+                    motivo = protocolo?.infProt?.xMotivo,
+                    protocolo = protocolo?.infProt?.nProt,
+                    numero = nfce.infNFe.ide.nNF,
+                    serie = nfce.infNFe.ide.serie
+                };
+            }
+            finally
             {
-                sucesso = autorizada,
-                ambiente = configuracao.tpAmb.ToString(),
-                modelo = "NFC-e 65",
-                chave = protocolo?.infProt?.chNFe ?? nfce.infNFe.Id?.Replace("NFe", ""),
-                cStatLote = retEnviNFe.cStat,
-                motivoLote = retEnviNFe.xMotivo,
-                cStat = protocolo?.infProt?.cStat,
-                motivo = protocolo?.infProt?.xMotivo,
-                protocolo = protocolo?.infProt?.nProt,
-                numero = nfce.infNFe.ide.nNF,
-                serie = nfce.infNFe.ide.serie
-            };
+                // Limpa os bytes descriptografados do PFX da memória
+                System.Security.Cryptography.CryptographicOperations
+                    .ZeroMemory(dadosCertificado.Pfx);
+            }
         }
 
-        public object ConsultarNFCe(string chave)
+
+        public async Task<object> ConsultarNFCeAsync( string chave, Guid empresaId)
         {
             if (string.IsNullOrWhiteSpace(chave))
-                throw new Exception("Chave da NFC-e não informada.");
+                throw new ArgumentException("Chave da NFC-e não informada.");
 
             chave = new string(chave.Where(char.IsDigit).ToArray());
 
             if (chave.Length != 44)
-                throw new Exception("A chave da NFC-e deve possuir 44 números.");
+                throw new ArgumentException("A chave deve possuir 44 números.");
 
-            var configuracao = _configFactory.Criar();
+            var empresa = await _context.Empresas
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == empresaId);
 
-            // Importante: modelo 65
-            configuracao.ModeloDocumento = ModeloDocumento.NFCe;
+            if (empresa == null || !empresa.Ativo)
+                throw new InvalidOperationException("Empresa inválida ou inativa.");
 
-            using var servicoNFe = new ServicosNFe(configuracao);
+            // Recupera o certificado A1 da empresa no Aiven
+            var dados = await _certificadoDigitalService
+                .ObterCertificadoAsync(empresaId);
 
-            var retorno = servicoNFe.NfeConsultaProtocolo(chave);
+            try
+            {
+                var configuracao = _configFactory
+                    .CriarComCertificadoEmMemoria(
+                        dados.Pfx,
+                        dados.Senha);
 
-            var retConsSitNFe = retorno.Retorno;
+                configuracao.ModeloDocumento = ModeloDocumento.NFCe;
+
+                using var servicoNFe = new ServicosNFe(configuracao);
+
+                var retorno = servicoNFe.NfeConsultaProtocolo(chave);
+
+                var resultado = retorno.Retorno;
+
+                return new
+                {
+                    chave,
+                    ambiente = configuracao.tpAmb.ToString(),
+                    modelo = "NFC-e 65",
+                    cStat = resultado.cStat,
+                    motivo = resultado.xMotivo,
+                    protocolo = resultado.protNFe?.infProt?.nProt
+                };
+            }
+            finally
+            {
+                System.Security.Cryptography.CryptographicOperations
+                    .ZeroMemory(dados.Pfx);
+            }
+        }
+
+
+        public async Task<object> ConsultarPendenciasNFCeAsync(Guid empresaId)
+        {
+            var notas = await _context.NotasFiscais
+                .AsNoTracking()
+                .Where(n =>
+                    n.EmpresaId == empresaId &&
+                    n.Modelo == 65 &&
+                    n.Status == "PENDENTE_TRANSMISSAO")
+                .OrderBy(n => n.CriadoEm)
+                .Select(n => new
+                {
+                    n.Id,
+                    n.Numero,
+                    n.Serie,
+                    n.ChaveAcesso,
+                    n.Status,
+                    n.CStat,
+                    n.XMotivo,
+                    n.CriadoEm
+                })
+                .ToListAsync();
 
             return new
             {
-                chave,
-                ambiente = configuracao.tpAmb.ToString(),
-                modelo = "NFC-e 65",
-                cStat = retConsSitNFe.cStat,
-                motivo = retConsSitNFe.xMotivo,
-                protocolo = retConsSitNFe.protNFe?.infProt?.nProt
+                quantidade = notas.Count,
+                notas
             };
         }
 

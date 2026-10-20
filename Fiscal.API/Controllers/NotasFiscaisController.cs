@@ -109,6 +109,7 @@ public class NotasFiscaisController : ControllerBase
         return Ok(nota);
     }
 
+
     [HttpGet("{id:guid}/xml")]
     public async Task<IActionResult> ObterXml(Guid id)
     {

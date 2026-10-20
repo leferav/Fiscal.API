@@ -3,6 +3,7 @@ using DFe.Classes.Flags;
 using DFe.Utils;
 using NFe.Classes.Informacoes.Identificacao.Tipos;
 using NFe.Utils;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Fiscal.API.Services.NFe
 {
@@ -76,5 +77,56 @@ namespace Fiscal.API.Services.NFe
                 }
             };
         }
+
+
+
+        public ConfiguracaoServico CriarComCertificadoEmMemoria( byte[] bytesPfx, string senhaCertificado)
+        {
+            if (bytesPfx == null || bytesPfx.Length == 0)
+                throw new ArgumentException(
+                    "Certificado digital não informado.",
+                    nameof(bytesPfx));
+
+            if (string.IsNullOrWhiteSpace(senhaCertificado))
+                throw new ArgumentException(
+                    "Senha do certificado não informada.",
+                    nameof(senhaCertificado));
+
+            var caminhoSchemas = Path.Combine(
+                _environment.ContentRootPath,
+                "Schemas");
+
+            if (!Directory.Exists(caminhoSchemas))
+                throw new DirectoryNotFoundException(
+                    $"Diretório de schemas não encontrado: {caminhoSchemas}");
+
+            return new ConfiguracaoServico
+            {
+                cUF = Estado.GO,
+                tpAmb = TipoAmbiente.Homologacao,
+                VersaoLayout = VersaoServico.Versao400,
+                ModeloDocumento = ModeloDocumento.NFe,
+                tpEmis = TipoEmissao.teNormal,
+
+                TimeOut = 30000,
+                ProtocoloDeSeguranca = System.Net.SecurityProtocolType.Tls12,
+
+                DefineVersaoServicosAutomaticamente = true,
+
+                ValidarSchemas = true,
+                DiretorioSchemas = caminhoSchemas,
+
+                Certificado = new ConfiguracaoCertificado
+                {
+                    TipoCertificado = TipoCertificado.A1ByteArray,
+                    ArrayBytesArquivo = bytesPfx,
+                    Senha = senhaCertificado,
+                    KeyStorageFlags = X509KeyStorageFlags.DefaultKeySet,
+                    ManterDadosEmCache = false
+                }
+            };
+        }
+
+
     }
 }

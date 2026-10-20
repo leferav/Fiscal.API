@@ -9,6 +9,8 @@ public class FiscalDbContext : DbContext
     public FiscalDbContext(DbContextOptions<FiscalDbContext> options) : base(options){ }
 
     public DbSet<Empresa> Empresas => Set<Empresa>();
+    public DbSet<CertificadoDigital> CertificadosDigitais => Set<CertificadoDigital>();
+    public DbSet<CertificadoDigitalArquivo> CertificadosDigitaisArquivos => Set<CertificadoDigitalArquivo>();
     public DbSet<ConfiguracaoFiscal> ConfiguracoesFiscais => Set<ConfiguracaoFiscal>();
     public DbSet<NotaFiscal> NotasFiscais => Set<NotaFiscal>();
     public DbSet<ConfiguracaoTributaria> ConfiguracoesTributarias => Set<ConfiguracaoTributaria>();
@@ -21,6 +23,8 @@ public class FiscalDbContext : DbContext
         base.OnModelCreating(modelBuilder);
 
         ConfigurarEmpresa(modelBuilder);
+        ConfigurarCertificadoDigital(modelBuilder);
+        ConfigurarCertificadoDigitalArquivo(modelBuilder);
         ConfigurarConfiguracaoFiscal(modelBuilder);
         ConfigurarNotaFiscal(modelBuilder);
         ConfigurarConfiguracaoTributaria(modelBuilder);
@@ -61,6 +65,101 @@ public class FiscalDbContext : DbContext
         entity.HasOne(x => x.ConfiguracaoFiscal)
             .WithOne(x => x.Empresa)
             .HasForeignKey<ConfiguracaoFiscal>(x => x.EmpresaId);
+    }
+
+    private static void ConfigurarCertificadoDigital( ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<CertificadoDigital>();
+
+        entity.ToTable("certificados_digitais");
+
+        entity.HasKey(x => x.Id);
+
+        entity.HasIndex(x => x.EmpresaId)
+            .IsUnique();
+
+        entity.Property(x => x.NomeArquivo)
+            .HasMaxLength(255)
+            .IsRequired(false);
+
+        entity.Property(x => x.Titular)
+            .HasMaxLength(250);
+
+        entity.Property(x => x.Cnpj)
+            .HasMaxLength(14);
+
+        entity.Property(x => x.NumeroSerie)
+            .HasMaxLength(100)
+            .IsRequired(false);
+
+        entity.Property(x => x.ReferenciaArmazenamento)
+            .HasMaxLength(500)
+            .IsRequired(false);
+
+        entity.Property(x => x.Emissor)
+            .HasMaxLength(200);
+
+        entity.Property(x => x.Thumbprint)
+            .HasMaxLength(100);
+
+        entity.Property(x => x.TipoArmazenamento)
+            .IsRequired();
+
+        entity.Property(x => x.ValidoDe)
+            .HasColumnType("timestamp with time zone");
+
+        entity.Property(x => x.ValidoAte)
+            .HasColumnType("timestamp with time zone");
+
+        entity.HasOne(x => x.Empresa)
+            .WithOne(x => x.CertificadoDigital)
+            .HasForeignKey<CertificadoDigital>(x => x.EmpresaId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigurarCertificadoDigitalArquivo(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<CertificadoDigitalArquivo>();
+
+        entity.ToTable("certificados_digitais_arquivos");
+
+        entity.HasKey(x => x.Id);
+
+        entity.HasIndex(x => x.CertificadoDigitalId)
+            .IsUnique();
+
+        entity.HasOne(x => x.CertificadoDigital)
+            .WithOne(x => x.Arquivo)
+            .HasForeignKey<CertificadoDigitalArquivo>(
+                x => x.CertificadoDigitalId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.Property(x => x.ConteudoCriptografado)
+            .HasColumnType("bytea")
+            .IsRequired();
+
+        entity.Property(x => x.Nonce)
+            .HasColumnType("bytea")
+            .IsRequired();
+
+        entity.Property(x => x.TagAutenticacao)
+            .HasColumnType("bytea")
+            .IsRequired();
+
+        entity.Property(x => x.SenhaCriptografada)
+            .HasColumnType("bytea")
+            .IsRequired();
+
+        entity.Property(x => x.SenhaNonce)
+            .HasColumnType("bytea")
+            .IsRequired();
+
+        entity.Property(x => x.SenhaTagAutenticacao)
+            .HasColumnType("bytea")
+            .IsRequired();
+
+        entity.Property(x => x.CriadoEm)
+            .HasColumnType("timestamp with time zone");
     }
 
     private static void ConfigurarConfiguracaoFiscal(ModelBuilder modelBuilder)

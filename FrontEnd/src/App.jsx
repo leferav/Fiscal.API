@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard/Dashboard";
 import Empresa from "./pages/Empresa/Empresa";
 import Configuracoes from "./pages/Configuracoes/Configuracoes";
 import { estaAutenticado, logout, } from "./services/authService";
+import CertificadoDigital from "./pages/CertificadoDigital/CertificadoDigital";
 
 function App() {
   const [autenticado, setAutenticado] =
@@ -68,6 +69,8 @@ function App() {
             <Route path="/cadastros/empresa" element={<Empresa />} />
 
             <Route path="/configuracoes" element={<Configuracoes />} />
+
+            <Route path="/configuracoes/certificado-digital" element={<CertificadoDigital />} />
 
           </Route>
         )}

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { obterMinhaConfiguracaoFiscal, atualizarMinhaConfiguracaoFiscal, } from "../../services/configuracaoFiscalService";
 import { obterConfiguracoesTributarias, cadastrarConfiguracaoTributaria, atualizarConfiguracaoTributaria, desativarConfiguracaoTributaria} from "../../services/configuracaoTributariaService";
 import ConfiguracaoTributariaModal from "./ConfiguracaoTributariaModal";
+import { useNavigate } from "react-router-dom";
 import "./Configuracoes.css";
 
 const formularioInicial = {
@@ -29,6 +30,7 @@ export default function Configuracoes() {
     const [salvandoTributaria, setSalvandoTributaria] = useState(false);
     const [configuracaoParaDesativar, setConfiguracaoParaDesativar, ] = useState(null);
     const [erroDesativacao, setErroDesativacao] = useState("");
+    const navigate = useNavigate();
 
     useEffect(() => {
         carregarConfiguracao();
@@ -326,6 +328,55 @@ export default function Configuracoes() {
             {sucesso}
             </div>
         )}
+    
+
+        {/* CERTIFICADO DIGITAL */}
+        <section className="configuracoes-card">
+        <div
+            className="configuracoes-card-titulo"
+            style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "16px",
+            flexWrap: "wrap",
+            }}
+        >
+            <div
+            style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                flex: 1,
+            }}
+            >
+            <div className="configuracoes-card-icone">
+                <i className="bi bi-shield-lock" />
+            </div>
+
+            <div>
+                <h2>Certificado Digital</h2>
+                <p>
+                Gerencie o certificado digital A1 utilizado
+                na assinatura e emissão de documentos fiscais.
+                </p>
+            </div>
+            </div>
+
+            <button
+            type="button"
+            className="configuracoes-salvar"
+            style={{ flexShrink: 0 }}
+            onClick={() =>
+                navigate("/configuracoes/certificado-digital")
+            }
+            >
+            <i className="bi bi-gear" />
+            Gerenciar certificado
+            </button>
+        </div>
+        </section>
+
 
         <form onSubmit={salvar}>
             {/* NFC-e */}
