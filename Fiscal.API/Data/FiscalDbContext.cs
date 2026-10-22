@@ -17,6 +17,8 @@ public class FiscalDbContext : DbContext
     public DbSet<Produto> Produtos => Set<Produto>();
     public DbSet<ProdutoImagem> ProdutosImagens => Set<ProdutoImagem>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
+    public DbSet<UsuarioEmpresa> UsuariosEmpresas => Set<UsuarioEmpresa>();
+    public DbSet<ConviteUsuario> ConvitesUsuarios => Set<ConviteUsuario>();
     public DbSet<Ncm> Ncms => Set<Ncm>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -30,9 +32,11 @@ public class FiscalDbContext : DbContext
         ConfigurarNotaFiscal(modelBuilder);
         ConfigurarConfiguracaoTributaria(modelBuilder);
         ConfigurarProduto(modelBuilder);
-        ConfigurarProdutoImagem(modelBuilder);
-        ConfigurarNcm(modelBuilder);    
+        ConfigurarProdutoImagem(modelBuilder);   
         ConfigurarUsuario(modelBuilder);
+        ConfigurarUsuarioEmpresa(modelBuilder);
+        ConfigurarConviteUsuario(modelBuilder);
+        ConfigurarNcm(modelBuilder);
     }
 
     private static void ConfigurarEmpresa(ModelBuilder modelBuilder)
@@ -375,6 +379,94 @@ public class FiscalDbContext : DbContext
             .WithMany(x => x.Usuarios)
             .HasForeignKey(x => x.EmpresaId)
             .OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigurarUsuarioEmpresa(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<UsuarioEmpresa>();
+
+        entity.ToTable("usuarios_empresas");
+
+        entity.HasKey(x => x.Id);
+
+        entity.Property(x => x.Perfil)
+            .HasMaxLength(50)
+            .IsRequired();
+
+        entity.Property(x => x.Ativo)
+            .IsRequired();
+
+        entity.Property(x => x.CriadoEm)
+            .HasColumnType("timestamp with time zone")
+            .IsRequired();
+
+        // Impede vincular o mesmo usuário duas vezes à mesma empresa
+        entity.HasIndex(x => new
+        {
+            x.UsuarioId,
+            x.EmpresaId
+        }).IsUnique();
+
+        // Relacionamento com o usuário
+        entity.HasOne(x => x.Usuario)
+            .WithMany(x => x.UsuariosEmpresas)
+            .HasForeignKey(x => x.UsuarioId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Relacionamento com a empresa
+        entity.HasOne(x => x.Empresa)
+            .WithMany()
+            .HasForeignKey(x => x.EmpresaId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigurarConviteUsuario(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<ConviteUsuario>(entity =>
+        {
+            entity.ToTable("convites_usuarios");
+
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.Nome)
+                .HasMaxLength(150)
+                .IsRequired();
+
+            entity.Property(x => x.Email)
+                .HasMaxLength(255)
+                .IsRequired();
+
+            entity.Property(x => x.Perfil)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            entity.Property(x => x.TokenHash)
+                .HasMaxLength(64)
+                .IsRequired();
+
+            entity.Property(x => x.CriadoEm)
+                .HasColumnType("timestamp with time zone");
+
+            entity.Property(x => x.ExpiraEm)
+                .HasColumnType("timestamp with time zone");
+
+            entity.Property(x => x.UtilizadoEm)
+                .HasColumnType("timestamp with time zone");
+
+            entity.HasIndex(x => x.TokenHash)
+                .IsUnique();
+
+            entity.HasIndex(x => new
+            {
+                x.EmpresaId,
+                x.Email
+            });
+
+            entity.HasOne<Empresa>()
+                .WithMany()
+                .HasForeignKey(x => x.EmpresaId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
     }
 
     private static void ConfigurarNcm(ModelBuilder modelBuilder)

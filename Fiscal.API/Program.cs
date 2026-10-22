@@ -1,6 +1,7 @@
 using Fiscal.API.Data;
 using Fiscal.API.Services;
 using Fiscal.API.Services.CertificadoDigital;
+using Fiscal.API.Services.Email;
 using Fiscal.API.Services.NFCe;
 using Fiscal.API.Services.NFe;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -82,14 +83,21 @@ builder.Services
             };
     });
 
-builder.Services.AddAuthorization();
-
 // ============================================================
 // SERVIÇOS DA APLICAÇÃO
 // ============================================================
 
 builder.Services.AddScoped<FiscalService>();
-builder.Services.AddAuthorization();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("SomenteMaster", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireClaim("administradorGeral", "true");
+    });
+});
+
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddSingleton<CertificadoCriptografiaService>();
 builder.Services.AddScoped<CertificadoDigitalService>();
@@ -106,6 +114,9 @@ builder.Services.AddScoped<TransporteBuilder>();
 builder.Services.AddScoped<PagamentoBuilder>();
 
 builder.Services.AddScoped<NFeXmlService>();
+
+builder.Services.AddHttpClient<EmailService>();
+builder.Services.AddScoped<ConviteUsuarioService>();
 
 // NFC-e
 builder.Services.AddScoped<NFCeBuilder>();

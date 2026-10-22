@@ -6,7 +6,7 @@ public class LoginResponse
     public DateTime ExpiraEm { get; set; }
 
     public UsuarioLoginResponse Usuario { get; set; } = new();
-    public EmpresaLoginResponse Empresa { get; set; } = new();
+    public EmpresaLoginResponse? Empresa { get; set; }
 }
 
 public class UsuarioLoginResponse

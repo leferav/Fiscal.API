@@ -30,7 +30,8 @@ public class AuthService
         string senha)
     {
         var usuario = await _context.Usuarios
-            .Include(x => x.Empresa)
+            .Include(x => x.UsuariosEmpresas)
+                .ThenInclude(x => x.Empresa)
             .FirstOrDefaultAsync(x =>
                 x.Email == email &&
                 x.Ativo);
@@ -47,6 +48,29 @@ public class AuthService
         if (resultadoSenha == PasswordVerificationResult.Failed)
             return null;
 
+        UsuarioEmpresa? usuarioEmpresa = null;
+
+        string perfil;
+
+        if (usuario.AdministradorGeral)
+        {
+            perfil = "Master";
+        }
+        else
+        {
+            var vinculosAtivos = usuario.UsuariosEmpresas
+                .Where(x => x.Ativo)
+                .ToList();
+
+            // Por enquanto, o login aceita apenas
+            // um vínculo ativo por usuário.
+            if (vinculosAtivos.Count != 1)
+                return null;
+
+            usuarioEmpresa = vinculosAtivos[0];
+            perfil = usuarioEmpresa.Perfil;
+        }
+
         var jwtKey = _configuration["Jwt:Key"]
             ?? throw new InvalidOperationException(
                 "Jwt:Key não configurada.");
@@ -61,33 +85,30 @@ public class AuthService
         var expiraEm = DateTime.UtcNow.AddMinutes(
             expirationMinutes);
 
+
         var claims = new List<Claim>
         {
+            new(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
+            new(ClaimTypes.Name, usuario.Nome),
+            new(ClaimTypes.Email, usuario.Email),
+            new(ClaimTypes.Role, perfil),
             new(
-                ClaimTypes.NameIdentifier,
-                usuario.Id.ToString()
-            ),
-
-            new(
-                ClaimTypes.Name,
-                usuario.Nome
-            ),
-
-            new(
-                ClaimTypes.Email,
-                usuario.Email
-            ),
-
-            new(
-                ClaimTypes.Role,
-                usuario.Perfil
-            ),
-
-            new(
-                "empresaId",
-                usuario.EmpresaId.ToString()
+                "administradorGeral",
+                usuario.AdministradorGeral
+                    .ToString()
+                    .ToLowerInvariant()
             )
         };
+
+        if (usuarioEmpresa != null)
+        {
+            claims.Add(new Claim(
+                "empresaId",
+                usuarioEmpresa.EmpresaId.ToString()
+            ));
+        }
+
+
 
         var chave = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(jwtKey)
@@ -120,15 +141,19 @@ public class AuthService
                 Id = usuario.Id,
                 Nome = usuario.Nome,
                 Email = usuario.Email,
-                Perfil = usuario.Perfil
+                Perfil = perfil
             },
 
-            Empresa = new EmpresaLoginResponse
+
+            Empresa = usuarioEmpresa == null
+            ? null
+            : new EmpresaLoginResponse
             {
-                Id = usuario.Empresa.Id,
-                RazaoSocial = usuario.Empresa.RazaoSocial,
-                NomeFantasia = usuario.Empresa.NomeFantasia
+                Id = usuarioEmpresa.Empresa.Id,
+                RazaoSocial = usuarioEmpresa.Empresa.RazaoSocial,
+                NomeFantasia = usuarioEmpresa.Empresa.NomeFantasia
             }
+
         };
     }
 }

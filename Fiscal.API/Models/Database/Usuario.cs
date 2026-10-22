@@ -6,6 +6,7 @@ public class Usuario
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
+    // Campos atuais: manter durante a migração
     public Guid EmpresaId { get; set; }
 
     public string Nome { get; set; } = string.Empty;
@@ -21,4 +22,11 @@ public class Usuario
     public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
 
     public Empresa Empresa { get; set; } = null!;
+
+    // Novo campo: administrador geral do Fiscal.API
+    public bool AdministradorGeral { get; set; } = false;
+
+    // Novos vínculos com as empresas
+    public ICollection<UsuarioEmpresa> UsuariosEmpresas
+    { get; set; } = new List<UsuarioEmpresa>();
 }

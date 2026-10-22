@@ -14,6 +14,7 @@ import Empresa from "./pages/Empresa/Empresa";
 import Configuracoes from "./pages/Configuracoes/Configuracoes";
 import { estaAutenticado, logout, } from "./services/authService";
 import CertificadoDigital from "./pages/CertificadoDigital/CertificadoDigital";
+import AceitarConvite from "./pages/AceitarConvite/AceitarConvite";
 
 function App() {
   const [autenticado, setAutenticado] =
@@ -43,6 +44,9 @@ function App() {
             )
           }
         />
+
+        {/* ACEITAR CONVITE - ROTA PÚBLICA */}
+        <Route path="/aceitar-convite" element={<AceitarConvite />}/>
 
         {/* ÁREA AUTENTICADA */}
         {autenticado && (
