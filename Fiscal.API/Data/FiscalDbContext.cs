@@ -15,6 +15,7 @@ public class FiscalDbContext : DbContext
     public DbSet<NotaFiscal> NotasFiscais => Set<NotaFiscal>();
     public DbSet<ConfiguracaoTributaria> ConfiguracoesTributarias => Set<ConfiguracaoTributaria>();
     public DbSet<Produto> Produtos => Set<Produto>();
+    public DbSet<ProdutoImagem> ProdutosImagens => Set<ProdutoImagem>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Ncm> Ncms => Set<Ncm>();
 
@@ -29,6 +30,7 @@ public class FiscalDbContext : DbContext
         ConfigurarNotaFiscal(modelBuilder);
         ConfigurarConfiguracaoTributaria(modelBuilder);
         ConfigurarProduto(modelBuilder);
+        ConfigurarProdutoImagem(modelBuilder);
         ConfigurarNcm(modelBuilder);    
         ConfigurarUsuario(modelBuilder);
     }
@@ -307,6 +309,39 @@ public class FiscalDbContext : DbContext
             .WithMany(x => x.Produtos)
             .HasForeignKey(x => x.ConfiguracaoTributariaId)
             .OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigurarProdutoImagem(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<ProdutoImagem>();
+
+        entity.ToTable("produtos_imagens");
+
+        entity.HasKey(x => x.Id);
+
+        entity.Property(x => x.Imagem)
+            .HasColumnType("bytea")
+            .IsRequired();
+
+        entity.Property(x => x.ContentType)
+            .HasMaxLength(50)
+            .IsRequired();
+
+        entity.Property(x => x.TamanhoBytes)
+            .IsRequired();
+
+        entity.Property(x => x.CriadoEm)
+            .HasColumnType("timestamp with time zone")
+            .IsRequired();
+
+        // Cada produto poderá ter somente uma imagem.
+        entity.HasIndex(x => x.ProdutoId)
+            .IsUnique();
+
+        entity.HasOne(x => x.Produto)
+            .WithOne(x => x.ImagemProduto)
+            .HasForeignKey<ProdutoImagem>(x => x.ProdutoId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 
     private static void ConfigurarUsuario(ModelBuilder modelBuilder)

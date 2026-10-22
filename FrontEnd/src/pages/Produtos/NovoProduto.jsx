@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { cadastrarProduto, alterarProduto, obterConfiguracoesTributarias, obterProdutoPorId, pesquisarNcms,} from "../../services/produtoService";
+import { cadastrarProduto, alterarProduto, obterConfiguracoesTributarias, obterProdutoPorId, pesquisarNcms, obterImagemProduto, enviarImagemProduto, } from "../../services/produtoService";
 import "./Produtos.css";
 
 export default function NovoProduto() {
@@ -14,6 +14,10 @@ export default function NovoProduto() {
   const [resultadosNcm, setResultadosNcm] = useState([]);
   const [pesquisandoNcm, setPesquisandoNcm] = useState(false);
   const [form, setForm] = useState({ codigo: "", descricao: "", ncm: "", unidade: "UN", valorVenda: "", configuracaoTributariaId: "", });
+  const [arquivoImagem, setArquivoImagem] = useState(null);
+  const [imagemPreview, setImagemPreview] = useState(null);
+  const [imagemAtual, setImagemAtual] = useState(null);
+  const [erroImagem, setErroImagem] = useState("");
 
   useEffect(() => {
   async function carregarConfiguracoes() {
@@ -76,6 +80,74 @@ export default function NovoProduto() {
 
   carregarProduto();
   }, [id, editando]);
+
+
+  useEffect(() => {
+    if (!editando) return;
+
+    let cancelado = false;
+    let urlImagem = null;
+
+    async function carregarImagem() {
+      try {
+        const url = await obterImagemProduto(id);
+
+        if (cancelado) {
+          if (url) URL.revokeObjectURL(url);
+          return;
+        }
+
+        urlImagem = url;
+        setImagemAtual(url);
+      } catch (error) {
+        console.error("Erro ao carregar imagem:", error);
+        if (!cancelado) {
+          setErroImagem("Não foi possível carregar a imagem atual.");
+        }
+      }
+    }
+
+    carregarImagem();
+
+    return () => {
+      cancelado = true;
+      if (urlImagem) URL.revokeObjectURL(urlImagem);
+    };
+  }, [id, editando]);
+
+useEffect(() => {
+  if (!arquivoImagem) {
+    setImagemPreview(null);
+    return;
+  }
+
+  const url = URL.createObjectURL(arquivoImagem);
+  setImagemPreview(url);
+
+  return () => URL.revokeObjectURL(url);
+}, [arquivoImagem]);
+
+function selecionarImagem(event) {
+  const arquivo = event.target.files?.[0];
+  if (!arquivo) return;
+
+  setErroImagem("");
+
+  if (!["image/jpeg", "image/png", "image/webp"].includes(arquivo.type)) {
+    setErroImagem("Selecione uma imagem JPG, PNG ou WebP.");
+    event.target.value = "";
+    return;
+  }
+
+  if (arquivo.size > 1024 * 1024) {
+    setErroImagem("A imagem deve ter no máximo 1 MB.");
+    event.target.value = "";
+    return;
+  }
+
+  setArquivoImagem(arquivo);
+}
+
 
   function alterarCampo(event) {
   const { name, value } = event.target;
@@ -183,16 +255,24 @@ export default function NovoProduto() {
     };
 
     if (editando) {
-    await alterarProduto(id, dadosProduto);
-    } else {
-    await cadastrarProduto(dadosProduto);
-    }
+      await alterarProduto(id, dadosProduto);
 
-    navigate(
-    editando
-        ? `/cadastros/produtos/${id}`
-        : "/cadastros/produtos"
-    );
+      if (arquivoImagem) {
+        await enviarImagemProduto(id, arquivoImagem);
+      }
+    } else {
+      const produtoCriado = await cadastrarProduto(dadosProduto);
+
+      if (arquivoImagem) {
+        if (!produtoCriado?.id) {
+          throw new Error(
+            "Produto cadastrado, mas não foi possível identificar seu ID para salvar a imagem."
+          );
+        }
+
+        await enviarImagemProduto(produtoCriado.id, arquivoImagem);
+      }
+    }
 
       navigate("/cadastros/produtos");
     } catch (error) {
@@ -335,6 +415,57 @@ export default function NovoProduto() {
             </div>
           </div>
         </section>
+
+
+        <section className="card detalhe-card produto-imagem-card">
+          <div className="detalhe-card-titulo">
+            <div className="detalhe-card-icone">
+              <i className="bi bi-image" />
+            </div>
+            <div>
+              <span className="label-azul">IMAGEM</span>
+              <h3>Imagem do produto</h3>
+            </div>
+          </div>
+
+          <div className="produto-imagem-conteudo">
+            <div className="produto-imagem-preview">
+              {imagemPreview || imagemAtual ? (
+                <img
+                  src={imagemPreview || imagemAtual}
+                  alt="Imagem do produto"
+                />
+              ) : (
+                <i className="bi bi-image" />
+              )}
+            </div>
+
+            <div className="produto-imagem-opcoes">
+              <label
+                htmlFor="arquivo-imagem-produto"
+                className="produto-imagem-selecionar"
+              >
+                <i className="bi bi-upload" />
+                {imagemPreview ? "Trocar imagem selecionada" : "Selecionar imagem"}
+              </label>
+
+              <input
+                id="arquivo-imagem-produto"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={selecionarImagem}
+                hidden
+              />
+
+              <small>JPG, PNG ou WebP. Máximo de 1 MB.</small>
+
+              {erroImagem && (
+                <span className="produto-imagem-erro">{erroImagem}</span>
+              )}
+            </div>
+          </div>
+        </section>
+
 
         <section className="card detalhe-card produto-tributacao-card">
           <div className="detalhe-card-titulo">

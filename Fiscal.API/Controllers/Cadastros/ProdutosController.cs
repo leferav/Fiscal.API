@@ -4,6 +4,9 @@ using Fiscal.API.Models.Requests.Cadastros;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.Processing;
 
 namespace Fiscal.API.Controllers.Cadastros
 {
@@ -421,5 +424,135 @@ namespace Fiscal.API.Controllers.Cadastros
                 produto.Ativo
             });
         }
+
+
+        [HttpPost("{id:guid}/imagem")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> EnviarImagem( Guid id, IFormFile arquivo)
+        {
+            var empresaIdClaim = User.FindFirst("empresaId")?.Value;
+
+            if (!Guid.TryParse(empresaIdClaim, out var empresaId))
+                return Unauthorized(new { mensagem = "Empresa não identificada no token." });
+
+            var produto = await _context.Produtos
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == id && x.EmpresaId == empresaId);
+
+            if (produto == null)
+                return NotFound(new { mensagem = "Produto não encontrado." });
+
+            if (arquivo == null || arquivo.Length == 0)
+                return BadRequest(new { mensagem = "Selecione uma imagem." });
+
+            if (arquivo.Length > 1024 * 1024)
+                return BadRequest(new { mensagem = "A imagem deve ter no máximo 1 MB." });
+
+            var formatos = new[] { "image/jpeg", "image/png", "image/webp" };
+
+            if (!formatos.Contains(arquivo.ContentType.ToLowerInvariant()))
+                return BadRequest(new { mensagem = "Formato inválido. Utilize JPG, PNG ou WebP." });
+
+            byte[] imagemBytes;
+
+            try
+            {
+                using var stream = arquivo.OpenReadStream();
+                using var imagem = await Image.LoadAsync(stream);
+
+                imagem.Mutate(x => x.Resize(new ResizeOptions
+                {
+                    Size = new Size(600, 600),
+                    Mode = ResizeMode.Max
+                }));
+
+                using var memoria = new MemoryStream();
+
+                await imagem.SaveAsync(memoria, new WebpEncoder
+                {
+                    Quality = 80
+                });
+
+                imagemBytes = memoria.ToArray();
+            }
+            catch (Exception ex) when (
+                ex is SixLabors.ImageSharp.UnknownImageFormatException ||
+                ex is SixLabors.ImageSharp.InvalidImageContentException)
+            {
+                return BadRequest(new { mensagem = "O arquivo não contém uma imagem válida." });
+            }
+
+            var imagemProduto = await _context.ProdutosImagens
+                .FirstOrDefaultAsync(x => x.ProdutoId == id);
+
+            if (imagemProduto == null)
+            {
+                imagemProduto = new ProdutoImagem
+                {
+                    Id = Guid.NewGuid(),
+                    ProdutoId = id,
+                    Imagem = imagemBytes,
+                    ContentType = "image/webp",
+                    TamanhoBytes = imagemBytes.Length,
+                    CriadoEm = DateTime.UtcNow
+                };
+
+                _context.ProdutosImagens.Add(imagemProduto);
+            }
+            else
+            {
+                imagemProduto.Imagem = imagemBytes;
+                imagemProduto.ContentType = "image/webp";
+                imagemProduto.TamanhoBytes = imagemBytes.Length;
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                mensagem = "Imagem do produto salva com sucesso.",
+                produtoId = id,
+                tamanhoBytes = imagemBytes.Length
+            });
+        }
+
+
+        [HttpGet("{id:guid}/imagem")]
+        public async Task<IActionResult> ObterImagem(Guid id)
+        {
+            var empresaIdClaim = User.FindFirst("empresaId")?.Value;
+
+            if (!Guid.TryParse(empresaIdClaim, out var empresaId))
+            {
+                return Unauthorized(new
+                {
+                    mensagem = "Empresa não identificada no token."
+                });
+            }
+
+            var imagem = await _context.ProdutosImagens
+                .AsNoTracking()
+                .Where(x =>
+                    x.ProdutoId == id &&
+                    x.Produto.EmpresaId == empresaId)
+                .Select(x => new
+                {
+                    x.Imagem,
+                    x.ContentType
+                })
+                .FirstOrDefaultAsync();
+
+            if (imagem == null)
+            {
+                return NotFound(new
+                {
+                    mensagem = "Este produto não possui imagem cadastrada."
+                });
+            }
+
+            return File(imagem.Imagem, imagem.ContentType);
+        }
+
+
     }
 }

@@ -22,6 +22,113 @@ namespace Fiscal.API.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Fiscal.API.Models.Database.CertificadoDigital", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("AtualizadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Cnpj")
+                        .HasMaxLength(14)
+                        .HasColumnType("character varying(14)");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Emissor")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NomeArquivo")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("NumeroSerie")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ReferenciaArmazenamento")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Thumbprint")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("TipoArmazenamento")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Titular")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<DateTime?>("ValidoAte")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ValidoDe")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmpresaId")
+                        .IsUnique();
+
+                    b.ToTable("certificados_digitais", (string)null);
+                });
+
+            modelBuilder.Entity("Fiscal.API.Models.Database.CertificadoDigitalArquivo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CertificadoDigitalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("ConteudoCriptografado")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("Nonce")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<byte[]>("SenhaCriptografada")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<byte[]>("SenhaNonce")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<byte[]>("SenhaTagAutenticacao")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<byte[]>("TagAutenticacao")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CertificadoDigitalId")
+                        .IsUnique();
+
+                    b.ToTable("certificados_digitais_arquivos", (string)null);
+                });
+
             modelBuilder.Entity("Fiscal.API.Models.Database.ConfiguracaoFiscal", b =>
                 {
                     b.Property<Guid>("Id")
@@ -352,6 +459,38 @@ namespace Fiscal.API.Migrations
                     b.ToTable("produtos", (string)null);
                 });
 
+            modelBuilder.Entity("Fiscal.API.Models.Database.ProdutoImagem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("Imagem")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<Guid>("ProdutoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TamanhoBytes")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProdutoId")
+                        .IsUnique();
+
+                    b.ToTable("produtos_imagens", (string)null);
+                });
+
             modelBuilder.Entity("Fiscal.API.Models.Usuario", b =>
                 {
                     b.Property<Guid>("Id")
@@ -395,6 +534,28 @@ namespace Fiscal.API.Migrations
                     b.HasIndex("EmpresaId");
 
                     b.ToTable("usuarios", (string)null);
+                });
+
+            modelBuilder.Entity("Fiscal.API.Models.Database.CertificadoDigital", b =>
+                {
+                    b.HasOne("Fiscal.API.Models.Database.Empresa", "Empresa")
+                        .WithOne("CertificadoDigital")
+                        .HasForeignKey("Fiscal.API.Models.Database.CertificadoDigital", "EmpresaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Empresa");
+                });
+
+            modelBuilder.Entity("Fiscal.API.Models.Database.CertificadoDigitalArquivo", b =>
+                {
+                    b.HasOne("Fiscal.API.Models.Database.CertificadoDigital", "CertificadoDigital")
+                        .WithOne("Arquivo")
+                        .HasForeignKey("Fiscal.API.Models.Database.CertificadoDigitalArquivo", "CertificadoDigitalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CertificadoDigital");
                 });
 
             modelBuilder.Entity("Fiscal.API.Models.Database.ConfiguracaoFiscal", b =>
@@ -449,6 +610,17 @@ namespace Fiscal.API.Migrations
                     b.Navigation("Empresa");
                 });
 
+            modelBuilder.Entity("Fiscal.API.Models.Database.ProdutoImagem", b =>
+                {
+                    b.HasOne("Fiscal.API.Models.Database.Produto", "Produto")
+                        .WithOne("ImagemProduto")
+                        .HasForeignKey("Fiscal.API.Models.Database.ProdutoImagem", "ProdutoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Produto");
+                });
+
             modelBuilder.Entity("Fiscal.API.Models.Usuario", b =>
                 {
                     b.HasOne("Fiscal.API.Models.Database.Empresa", "Empresa")
@@ -460,6 +632,11 @@ namespace Fiscal.API.Migrations
                     b.Navigation("Empresa");
                 });
 
+            modelBuilder.Entity("Fiscal.API.Models.Database.CertificadoDigital", b =>
+                {
+                    b.Navigation("Arquivo");
+                });
+
             modelBuilder.Entity("Fiscal.API.Models.Database.ConfiguracaoTributaria", b =>
                 {
                     b.Navigation("Produtos");
@@ -467,6 +644,8 @@ namespace Fiscal.API.Migrations
 
             modelBuilder.Entity("Fiscal.API.Models.Database.Empresa", b =>
                 {
+                    b.Navigation("CertificadoDigital");
+
                     b.Navigation("ConfiguracaoFiscal");
 
                     b.Navigation("ConfiguracoesTributarias");
@@ -476,6 +655,11 @@ namespace Fiscal.API.Migrations
                     b.Navigation("Produtos");
 
                     b.Navigation("Usuarios");
+                });
+
+            modelBuilder.Entity("Fiscal.API.Models.Database.Produto", b =>
+                {
+                    b.Navigation("ImagemProduto");
                 });
 #pragma warning restore 612, 618
         }

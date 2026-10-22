@@ -1,4 +1,4 @@
-import { apiRequestAutenticado } from "./apiClient";
+import { apiRequestAutenticado, apiDownloadAutenticado } from "./apiClient";
 
 export async function obterProdutos() {
   const { response, dados } =
@@ -111,3 +111,50 @@ export async function pesquisarNcms(busca) {
 
   return dados;
 }
+
+
+export async function obterImagemProduto(id) {
+  const response = await apiDownloadAutenticado(
+    `/api/cadastros/produtos/${id}/imagem`
+  );
+
+  // Produto sem imagem cadastrada.
+  if (response.status === 404) {
+    return null;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      "Não foi possível carregar a imagem do produto."
+    );
+  }
+
+  const blob = await response.blob();
+
+  return URL.createObjectURL(blob);
+}
+
+
+
+export async function enviarImagemProduto(id, arquivo) {
+  const formData = new FormData();
+  formData.append("arquivo", arquivo);
+
+  const { response, dados } = await apiRequestAutenticado(
+    `/api/cadastros/produtos/${id}/imagem`,
+    {
+      method: "POST",
+      body: formData
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      dados?.mensagem ||
+      "Não foi possível salvar a imagem do produto."
+    );
+  }
+
+  return dados;
+}
+

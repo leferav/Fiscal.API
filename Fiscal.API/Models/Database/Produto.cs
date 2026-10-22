@@ -27,5 +27,6 @@
         public decimal ValorVenda { get; set; }
 
         public ConfiguracaoTributaria ConfiguracaoTributaria { get; set; } = null!;
+        public ProdutoImagem? ImagemProduto { get; set; }
     }
 }

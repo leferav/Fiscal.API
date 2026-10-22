@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { obterProdutos } from "../../services/produtoService";
+import { obterProdutos, obterImagemProduto } from "../../services/produtoService";
 import FinalizarVendaModal from "./FinalizarVendaModal";
 import { autorizarNFCe } from "../../services/fiscalApi";
 import { obterEmpresaId } from "../../services/authService";
@@ -7,6 +7,7 @@ import "./Vendas.css";
 
 export default function Vendas() {
     const [produtos, setProdutos] = useState([]);
+    const [imagensProdutos, setImagensProdutos] = useState({});    
     const [pesquisa, setPesquisa] = useState("");
     const [carregando, setCarregando] = useState(true);
     const [erro, setErro] = useState("");
@@ -15,6 +16,7 @@ export default function Vendas() {
     const [emitindo, setEmitindo] = useState(false);
     const [erroEmissao, setErroEmissao] = useState("");
     const empresaId = obterEmpresaId();
+
 
     useEffect(() => {
     async function carregarProdutos() {
@@ -38,6 +40,57 @@ export default function Vendas() {
 
     carregarProdutos();
     }, []);
+
+    
+    useEffect(() => {
+        let cancelado = false;
+        const urlsCriadas = [];
+
+        async function carregarImagens() {
+            // Carrega as imagens em pequenos grupos para
+            // evitar muitas requisições simultâneas.
+            const tamanhoLote = 5;
+
+            for (let i = 0; i < produtos.length; i += tamanhoLote) {
+                if (cancelado) break;
+
+                const lote = produtos.slice(i, i + tamanhoLote);
+
+                await Promise.all(
+                    lote.map(async (produto) => {
+                        try {
+                            const url = await obterImagemProduto(produto.id);
+
+                            if (!url) return;
+
+                            urlsCriadas.push(url);
+
+                            if (!cancelado) {
+                                setImagensProdutos((atual) => ({
+                                    ...atual,
+                                    [produto.id]: url
+                                }));
+                            }
+                        } catch (error) {
+                            console.error(
+                                `Erro ao carregar imagem do produto ${produto.id}:`,
+                                error
+                            );
+                        }
+                    })
+                );
+            }
+        }
+
+        setImagensProdutos({});
+        carregarImagens();
+
+        return () => {
+            cancelado = true;
+            urlsCriadas.forEach((url) => URL.revokeObjectURL(url));
+        };
+    }, [produtos]);
+
 
     const produtosFiltrados = useMemo(() => {
     const termo = pesquisa
@@ -258,9 +311,19 @@ export default function Vendas() {
                     key={produto.id}
                     onClick={() => adicionarProduto(produto)}
                     >
+
                     <div className="vendas-produto-icone">
-                    <i className="bi bi-box-seam" />
+                        {imagensProdutos[produto.id] ? (
+                            <img
+                                src={imagensProdutos[produto.id]}
+                                alt={produto.descricao}
+                                className="vendas-produto-imagem"
+                            />
+                        ) : (
+                            <i className="bi bi-box-seam" />
+                        )}
                     </div>
+
 
                     <div className="vendas-produto-info">
                     <small>
