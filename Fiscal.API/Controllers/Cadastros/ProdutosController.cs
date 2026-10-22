@@ -4,9 +4,7 @@ using Fiscal.API.Models.Requests.Cadastros;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Webp;
-using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 
 namespace Fiscal.API.Controllers.Cadastros
 {
@@ -453,34 +451,99 @@ namespace Fiscal.API.Controllers.Cadastros
             if (!formatos.Contains(arquivo.ContentType.ToLowerInvariant()))
                 return BadRequest(new { mensagem = "Formato inválido. Utilize JPG, PNG ou WebP." });
 
+
+
+
             byte[] imagemBytes;
+
 
             try
             {
                 using var stream = arquivo.OpenReadStream();
-                using var imagem = await Image.LoadAsync(stream);
-
-                imagem.Mutate(x => x.Resize(new ResizeOptions
-                {
-                    Size = new Size(600, 600),
-                    Mode = ResizeMode.Max
-                }));
-
                 using var memoria = new MemoryStream();
 
-                await imagem.SaveAsync(memoria, new WebpEncoder
-                {
-                    Quality = 80
-                });
+                await stream.CopyToAsync(memoria);
 
-                imagemBytes = memoria.ToArray();
+                using var imagemOriginal = SKBitmap.Decode(memoria.ToArray());
+
+                if (imagemOriginal == null)
+                {
+                    return BadRequest(new
+                    {
+                        mensagem = "O arquivo não contém uma imagem válida."
+                    });
+                }
+
+                const int tamanhoMaximo = 600;
+
+                double escala = Math.Min(
+                    1.0,
+                    Math.Min(
+                        (double)tamanhoMaximo / imagemOriginal.Width,
+                        (double)tamanhoMaximo / imagemOriginal.Height
+                    )
+                );
+
+                int largura = Math.Max(
+                    1,
+                    (int)Math.Round(imagemOriginal.Width * escala)
+                );
+
+                int altura = Math.Max(
+                    1,
+                    (int)Math.Round(imagemOriginal.Height * escala)
+                );
+
+                using var imagemRedimensionada = new SKBitmap(
+                    largura,
+                    altura
+                );
+
+                using (var canvas = new SKCanvas(imagemRedimensionada))
+                {
+                    canvas.Clear(SKColors.Transparent);
+
+                    using var paint = new SKPaint
+                    {
+                        IsAntialias = true
+                    };
+
+                    canvas.DrawBitmap(
+                        imagemOriginal,
+                        new SKRect(0, 0, largura, altura),
+                        paint
+                    );
+
+                    canvas.Flush();
+                }
+
+                using var imagemFinal = SKImage.FromBitmap(imagemRedimensionada);
+
+                using var dadosWebp = imagemFinal.Encode(
+                    SKEncodedImageFormat.Webp,
+                    80
+                );
+
+                if (dadosWebp == null)
+                {
+                    return BadRequest(new
+                    {
+                        mensagem = "Não foi possível converter a imagem para WebP."
+                    });
+                }
+
+                imagemBytes = dadosWebp.ToArray();
             }
-            catch (Exception ex) when (
-                ex is SixLabors.ImageSharp.UnknownImageFormatException ||
-                ex is SixLabors.ImageSharp.InvalidImageContentException)
+            catch (Exception ex)
             {
-                return BadRequest(new { mensagem = "O arquivo não contém uma imagem válida." });
+                Console.Error.WriteLine(ex);
+
+                return BadRequest(new
+                {
+                    mensagem = "Não foi possível processar a imagem enviada."
+                });
             }
+
 
             var imagemProduto = await _context.ProdutosImagens
                 .FirstOrDefaultAsync(x => x.ProdutoId == id);
