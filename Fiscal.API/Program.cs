@@ -1,4 +1,5 @@
 using Fiscal.API.Data;
+using Fiscal.API.Middleware;
 using Fiscal.API.Services;
 using Fiscal.API.Services.CertificadoDigital;
 using Fiscal.API.Services.Email;
@@ -142,6 +143,9 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Tratamento global de exceções
+app.UseMiddleware<ExceptionMiddleware>();
+
 // ============================================================
 // PIPELINE
 // ============================================================
@@ -161,6 +165,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.UseMiddleware<ExceptionMiddleware>();
 
 await UsuarioSeed.CriarAdminInicialAsync(
     app.Services,

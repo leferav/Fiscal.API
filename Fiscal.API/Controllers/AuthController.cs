@@ -1,7 +1,12 @@
-﻿using Fiscal.API.DTOs.Auth;
+﻿using Fiscal.API.Constants;
+using Fiscal.API.DTOs.Auth;
+using Fiscal.API.DTOs.Common;
 using Fiscal.API.Services;
 using Fiscal.API.Services.Email;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace Fiscal.API.Controllers;
 
@@ -35,15 +40,99 @@ public class AuthController : ControllerBase
             request.Senha
         );
 
-        if (resultado == null)
+
+        switch (resultado.Status)
         {
-            return Unauthorized(new
+            case StatusLogin.CredenciaisInvalidas:
+                return Unauthorized(new ErroResponse
+                {
+                    Codigo = "CREDENCIAIS_INVALIDAS",
+                    Mensagem = MensagensErro.CredenciaisInvalidas,
+                    TraceId = HttpContext.TraceIdentifier
+                });
+
+            case StatusLogin.UsuarioInativo:
+                return StatusCode(403, new ErroResponse
+                {
+                    Codigo = "USUARIO_INATIVO",
+                    Mensagem = MensagensErro.UsuarioInativo,
+                    TraceId = HttpContext.TraceIdentifier
+                });
+
+            case StatusLogin.MultiplasEmpresas:
+                return Conflict(new ErroResponse
+                {
+                    Codigo = "MULTIPLAS_EMPRESAS",
+                    Mensagem = MensagensErro.MultiplasEmpresas,
+                    TraceId = HttpContext.TraceIdentifier
+                });
+
+            case StatusLogin.Sucesso:
+                if (resultado.Dados == null)
+                    return StatusCode(500);
+
+                return Ok(resultado.Dados);
+
+            default:
+                return StatusCode(500);
+        }
+
+    }
+
+
+    [Authorize(Roles = "Master")]
+    [HttpPost("selecionar-empresa")]
+    public async Task<IActionResult> SelecionarEmpresa([FromBody] SelecionarEmpresaRequest request)
+    {
+        if (request == null || request.EmpresaId == Guid.Empty)
+        {
+            return BadRequest(new
             {
-                mensagem = "E-mail ou senha inválidos."
+                mensagem = "Informe a empresa."
             });
         }
 
-        return Ok(resultado);
+        var usuarioIdClaim =
+            User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(usuarioIdClaim, out var usuarioId))
+        {
+            return Unauthorized(new
+            {
+                mensagem = "Usuário não identificado."
+            });
+        }
+
+        var tokenAtual = Request.Headers.Authorization
+            .ToString()
+            .Replace("Bearer ", "", StringComparison.OrdinalIgnoreCase)
+            .Trim();
+
+        var jwt = new JwtSecurityTokenHandler()
+            .ReadJwtToken(tokenAtual);
+
+        var expiraEm = jwt.ValidTo;
+
+        var resultado = await _authService
+            .GerarTokenMasterEmpresaAsync(
+                usuarioId,
+                request.EmpresaId,
+                expiraEm);
+
+        if (resultado == null)
+        {
+            return StatusCode(403, new
+            {
+                mensagem = "Usuário Master ou empresa inválida."
+            });
+        }
+
+        return Ok(new
+        {
+            token = resultado.Value.Token,
+            expiraEm = resultado.Value.ExpiraEm,
+            empresaId = request.EmpresaId
+        });
     }
 
 
@@ -75,4 +164,9 @@ public class AuthController : ControllerBase
         });
     }
 
+}
+
+public class SelecionarEmpresaRequest
+{
+    public Guid EmpresaId { get; set; }
 }

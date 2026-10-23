@@ -1,16 +1,82 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   obterEmpresa,
   obterUsuario,
+  obterEmpresaTrabalho,
+  selecionarEmpresaTrabalho,
 } from "../../services/authService";
+import { listarEmpresas } from "../../services/empresaService";
 
 export default function Header({ onLogout }) {
-  const [menuUsuarioAberto, setMenuUsuarioAberto] =
-    useState(false);
-
+  const [menuUsuarioAberto, setMenuUsuarioAberto] = useState(false);
   const usuario = obterUsuario();
-  const empresa = obterEmpresa();
+  const master = usuario?.perfil === "Master";
+
+  const [empresaSelecionada, setEmpresaSelecionada] = useState(() =>
+    obterEmpresaTrabalho()
+  );
+  const [empresas, setEmpresas] = useState([]);
+  const [erroEmpresas, setErroEmpresas] = useState("");
+  const [carregandoEmpresas, setCarregandoEmpresas] = useState(false);
+
+  const empresa = master ? empresaSelecionada : obterEmpresa();
+
+  useEffect(() => {
+    if (!master) return;
+
+    let ativo = true;
+
+    async function carregarEmpresas() {
+      setCarregandoEmpresas(true);
+      setErroEmpresas("");
+
+      try {
+        const dados = await listarEmpresas();
+        if (!ativo) return;
+
+        const empresasAtivas = Array.isArray(dados)
+          ? dados.filter((item) => item.ativo)
+          : [];
+
+        setEmpresas(empresasAtivas);
+
+        const selecionada = obterEmpresaTrabalho();
+        if (
+          selecionada &&
+          !empresasAtivas.some((item) => item.id === selecionada.id)
+        ) {
+          localStorage.removeItem("fiscal_empresa_trabalho");
+          setEmpresaSelecionada(null);
+          window.dispatchEvent(new Event("fiscal-empresa-alterada"));
+        }
+      } catch (error) {
+        if (ativo) {
+          setErroEmpresas(
+            error?.message || "Não foi possível carregar as empresas."
+          );
+        }
+      } finally {
+        if (ativo) setCarregandoEmpresas(false);
+      }
+    }
+
+    carregarEmpresas();
+    return () => {
+      ativo = false;
+    };
+  }, [master]);
+
+  function alterarEmpresa(event) {
+    const selecionada = empresas.find(
+      (item) => item.id === event.target.value
+    );
+
+    if (!selecionada) return;
+
+    selecionarEmpresaTrabalho(selecionada);
+    setEmpresaSelecionada(selecionada);
+  }
 
   return (
     <header className="topo">
@@ -34,23 +100,47 @@ export default function Header({ onLogout }) {
 
           <div className="header-company">
             <span className="header-company-label">
-              Empresa
+              {master ? "Empresa de trabalho" : "Empresa"}
             </span>
 
-            <strong>
-              {empresa?.nomeFantasia ||
-                empresa?.razaoSocial ||
-                "Empresa"}
-            </strong>
+            {master ? (
+              <>
+                <select
+                  className="header-empresa-select"
+                  value={empresaSelecionada?.id ?? ""}
+                  onChange={alterarEmpresa}
+                  disabled={carregandoEmpresas}
+                  aria-label="Selecionar empresa de trabalho"
+                >
+                  <option value="" disabled>
+                    {carregandoEmpresas
+                      ? "Carregando empresas..."
+                      : "Selecione uma empresa"}
+                  </option>
+                  {empresas.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.nomeFantasia || item.razaoSocial || item.cnpj}
+                    </option>
+                  ))}
+                </select>
+                {erroEmpresas && (
+                  <small className="header-empresa-erro" role="alert">
+                    {erroEmpresas}
+                  </small>
+                )}
+              </>
+            ) : (
+              <strong>
+                {empresa?.nomeFantasia || empresa?.razaoSocial || "Empresa"}
+              </strong>
+            )}
           </div>
 
           <div className="header-user-wrapper">
             <button
               type="button"
               className="header-user-button"
-              onClick={() =>
-                setMenuUsuarioAberto((aberto) => !aberto)
-              }
+              onClick={() => setMenuUsuarioAberto((aberto) => !aberto)}
             >
               <div className="header-user-avatar">
                 {usuario?.nome?.charAt(0).toUpperCase() || "U"}

@@ -40,6 +40,31 @@ public class EmpresasController : ControllerBase
     }
 
     /* ============================================================
+       GET - LISTAR EMPRESAS (SOMENTE MASTER)
+       GET /api/cadastros/empresas
+       ============================================================ */
+
+    [HttpGet]
+    [Authorize(Roles = "Master")]
+    public async Task<IActionResult> ListarEmpresas()
+    {
+        var empresas = await _context.Empresas
+            .AsNoTracking()
+            .OrderBy(x => x.RazaoSocial)
+            .Select(x => new
+            {
+                x.Id,
+                x.Cnpj,
+                x.RazaoSocial,
+                x.NomeFantasia,
+                x.Ativo
+            })
+            .ToListAsync();
+
+        return Ok(empresas);
+    }
+
+    /* ============================================================
        GET - MINHA EMPRESA
        GET /api/cadastros/empresas/minha
        ============================================================ */

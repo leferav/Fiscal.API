@@ -1,6 +1,9 @@
 import { NavLink } from "react-router-dom";
+import { podeGerenciarUsuarios } from "../../services/authService";
 
 export default function Sidebar() {
+  const exibirUsuarios = podeGerenciarUsuarios();
+
   return (
     <aside className="sidebar">
       <nav className="sidebar-nav">
@@ -76,6 +79,19 @@ export default function Sidebar() {
             <i className="bi bi-people" />
             <span>Empresa</span>
           </NavLink>
+         
+          {exibirUsuarios && (
+            <NavLink
+              to="/cadastros/usuarios"
+              className={({ isActive }) =>
+                `sidebar-link${isActive ? " active" : ""}`
+              }
+            >
+              <i className="bi bi-person-gear" />
+              <span>Usuários</span>
+            </NavLink>
+          )}
+
         </div>
 
         <div className="sidebar-grupo">

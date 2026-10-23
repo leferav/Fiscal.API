@@ -1,3 +1,4 @@
+
 import { apiRequest } from "./apiClient";
 
 
@@ -40,12 +41,10 @@ export function salvarSessao(dados) {
 
   }
 
-
   localStorage.setItem(
     "fiscal_token",
     dados.token
   );
-
 
   localStorage.setItem(
     "fiscal_usuario",
@@ -54,6 +53,7 @@ export function salvarSessao(dados) {
     )
   );
 
+  localStorage.removeItem("fiscal_empresa_trabalho");
 
   localStorage.setItem(
     "fiscal_empresa",
@@ -61,7 +61,6 @@ export function salvarSessao(dados) {
       dados.empresa ?? null
     )
   );
-
 
   /*
     O backend já devolve ExpiraEm.
@@ -103,11 +102,9 @@ export function obterUsuario() {
       "fiscal_usuario"
     );
 
-
   if (!dados) {
     return null;
   }
-
 
   try {
 
@@ -129,11 +126,9 @@ export function obterEmpresa() {
       "fiscal_empresa"
     );
 
-
   if (!dados) {
     return null;
   }
-
 
   try {
 
@@ -149,13 +144,111 @@ export function obterEmpresa() {
 
 
 export function obterEmpresaId() {
-
-  const empresa =
-    obterEmpresa();
-
+  const empresa = obterEmpresaTrabalho();
 
   return empresa?.id ?? null;
+}
 
+
+export function obterEmpresaTrabalho() {
+  const usuario = obterUsuario();
+
+  if (usuario?.perfil !== "Master") {
+    return obterEmpresa();
+  }
+
+  try {
+    const dados = localStorage.getItem(
+      "fiscal_empresa_trabalho"
+    );
+
+    return dados ? JSON.parse(dados) : null;
+  } catch {
+    return null;
+  }
+}
+
+
+// ============================================================
+// MASTER - SELECIONAR EMPRESA E ATUALIZAR JWT
+// ============================================================
+
+export async function selecionarEmpresaTrabalho(empresa) {
+  const usuario = obterUsuario();
+
+  if (usuario?.perfil !== "Master") {
+    throw new Error(
+      "Somente o Master pode selecionar uma empresa."
+    );
+  }
+
+  if (!empresa?.id) {
+    throw new Error("Selecione uma empresa válida.");
+  }
+
+  const tokenAtual = obterToken();
+
+  if (!tokenAtual) {
+    throw new Error(
+      "Sessão não encontrada. Faça login novamente."
+    );
+  }
+
+  // O backend valida a empresa e gera um novo JWT.
+  const { response, dados } = await apiRequest(
+    "/api/auth/selecionar-empresa",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${tokenAtual}`,
+      },
+      body: JSON.stringify({
+        empresaId: empresa.id,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      dados?.mensagem ||
+      dados?.erro ||
+      "Não foi possível selecionar a empresa."
+    );
+  }
+
+  if (
+    !dados?.token ||
+    !dados?.expiraEm ||
+    String(dados?.empresaId).toLowerCase() !==
+      String(empresa.id).toLowerCase()
+  ) {
+    throw new Error(
+      "Resposta inválida ao selecionar a empresa."
+    );
+  }
+
+  // Atualiza somente o token e a empresa de trabalho.
+  // Não utilizar salvarSessao(), pois ela reinicia a seleção.
+
+  localStorage.setItem(
+    "fiscal_token",
+    dados.token
+  );
+
+  localStorage.setItem(
+    "fiscal_expira_em",
+    dados.expiraEm
+  );
+
+  localStorage.setItem(
+    "fiscal_empresa_trabalho",
+    JSON.stringify(empresa)
+  );
+
+  window.dispatchEvent(
+    new Event("fiscal-empresa-alterada")
+  );
 }
 
 
@@ -173,11 +266,9 @@ export function tokenExpirado() {
   const token =
     obterToken();
 
-
   if (!token) {
     return true;
   }
-
 
   try {
 
@@ -193,17 +284,14 @@ export function tokenExpirado() {
     const partes =
       token.split(".");
 
-
     if (partes.length !== 3) {
       return true;
     }
-
 
     const payloadBase64 =
       partes[1]
         .replace(/-/g, "+")
         .replace(/_/g, "/");
-
 
     const payloadJson =
       decodeURIComponent(
@@ -220,21 +308,17 @@ export function tokenExpirado() {
           .join("")
       );
 
-
     const payload =
       JSON.parse(payloadJson);
-
 
     if (!payload.exp) {
       return true;
     }
 
-
     const agora =
       Math.floor(
         Date.now() / 1000
       );
-
 
     return payload.exp <= agora;
 
@@ -257,11 +341,9 @@ export function estaAutenticado() {
   const token =
     obterToken();
 
-
   if (!token) {
     return false;
   }
-
 
   if (tokenExpirado()) {
 
@@ -270,7 +352,6 @@ export function estaAutenticado() {
     return false;
 
   }
-
 
   return true;
 
@@ -295,4 +376,25 @@ export function logout() {
     "fiscal_expira_em"
   );
 
+  localStorage.removeItem(
+    "fiscal_empresa_trabalho"
+  );
+
+  window.dispatchEvent(
+    new Event("fiscal-sessao-encerrada")
+  );
+
+}
+
+
+export function podeGerenciarUsuarios() {
+  const usuario = obterUsuario();
+
+  if (!usuario) {
+    return false;
+  }
+
+  return ["Master", "Administrador"].includes(
+    usuario.perfil
+  );
 }

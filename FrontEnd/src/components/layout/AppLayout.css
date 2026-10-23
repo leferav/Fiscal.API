@@ -81,3 +81,40 @@
   flex: 1;
   min-width: 0;
 }
+
+
+/* Seletor de empresa do usuário Master */
+
+.header-empresa-select {
+  width: 100%;
+  min-width: 170px;
+  max-width: 250px;
+  padding: 7px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #17365d;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.header-empresa-select:focus {
+  outline: none;
+  border-color: #0874bd;
+}
+
+.header-empresa-erro {
+  display: block;
+  margin-top: 4px;
+  color: #dc2626;
+  font-size: 11px;
+}
+
+/* Ajuste para celulares */
+
+@media (max-width: 768px) {
+  .header-empresa-select {
+    min-width: 120px;
+    max-width: 180px;
+  }
+}

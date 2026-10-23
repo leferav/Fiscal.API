@@ -35,3 +35,24 @@ export async function atualizarMinhaEmpresa(dadosEmpresa) {
 
   return dados;
 }
+// Disponível apenas para o perfil Master.
+export async function listarEmpresas() {
+  const { response, dados } = await apiRequestAutenticado(
+    "/api/cadastros/empresas",
+    { method: "GET" }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      dados?.mensagem ||
+      (typeof dados === "string" ? dados : null) ||
+      "Não foi possível listar as empresas."
+    );
+  }
+
+  if (!Array.isArray(dados)) {
+    throw new Error("Resposta inesperada ao listar empresas.");
+  }
+
+  return dados;
+}

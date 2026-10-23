@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes,} from "react-router-dom";
 import Login from "./pages/Login/Login";
 import Produtos from "./pages/Produtos/Produtos";
@@ -12,25 +12,69 @@ import Vendas from "./pages/Vendas/Vendas";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import Empresa from "./pages/Empresa/Empresa";
 import Configuracoes from "./pages/Configuracoes/Configuracoes";
-import { estaAutenticado, logout, } from "./services/authService";
+import {
+  estaAutenticado,
+  logout,
+  podeGerenciarUsuarios,
+  obterUsuario,
+  obterEmpresaTrabalho,
+} from "./services/authService";
+import SelecionarEmpresaModal from "./components/layout/SelecionarEmpresaModal";
 import CertificadoDigital from "./pages/CertificadoDigital/CertificadoDigital";
 import AceitarConvite from "./pages/AceitarConvite/AceitarConvite";
+import Usuarios from "./pages/Usuarios/Usuarios";
 
 function App() {
-  const [autenticado, setAutenticado] =
-    useState(estaAutenticado());
+  const [autenticado, setAutenticado] = useState(estaAutenticado());
+  const [empresaAtivaId, setEmpresaAtivaId] = useState( () => obterEmpresaTrabalho()?.id ?? null);
+  const master = autenticado && obterUsuario()?.perfil === "Master";
+  const precisaSelecionarEmpresa = master && !empresaAtivaId;
+
+  useEffect(() => {
+    function sessaoEncerrada() {
+      setAutenticado(false);
+      setEmpresaAtivaId(null);
+    }
+
+    window.addEventListener(
+      "fiscal-sessao-encerrada",
+      sessaoEncerrada
+    );
+
+    return () => {
+      window.removeEventListener(
+        "fiscal-sessao-encerrada",
+        sessaoEncerrada
+      );
+    };
+  }, []);    
+
+  useEffect(() => {
+    function atualizarEmpresa() {
+      setEmpresaAtivaId(obterEmpresaTrabalho()?.id ?? null);
+    }
+    window.addEventListener("fiscal-empresa-alterada", atualizarEmpresa);
+    return () => window.removeEventListener("fiscal-empresa-alterada", atualizarEmpresa);
+  }, []);
+
+
 
   function handleLogin() {
+    setEmpresaAtivaId(obterEmpresaTrabalho()?.id ?? null);
     setAutenticado(true);
   }
 
   function handleLogout() {
     logout();
+    setEmpresaAtivaId(null);
     setAutenticado(false);
   }
 
   return (
     <BrowserRouter>
+      {precisaSelecionarEmpresa && (
+        <SelecionarEmpresaModal onLogout={handleLogout} />
+      )}
       <Routes>
 
         {/* LOGIN */}
@@ -49,8 +93,8 @@ function App() {
         <Route path="/aceitar-convite" element={<AceitarConvite />}/>
 
         {/* ÁREA AUTENTICADA */}
-        {autenticado && (
-          <Route element={<AppLayout onLogout={handleLogout} />}>
+        {autenticado && !precisaSelecionarEmpresa && (
+          <Route element={<AppLayout key={empresaAtivaId ?? "padrao"} onLogout={handleLogout} />}>
 
             <Route path="/dashboard" element={<Dashboard />} />
 
@@ -71,6 +115,8 @@ function App() {
             <Route path="/cadastros/produtos/:id/editar" element={<NovoProduto />} />
 
             <Route path="/cadastros/empresa" element={<Empresa />} />
+
+            <Route path="/cadastros/usuarios" element={ podeGerenciarUsuarios() ? (<Usuarios /> ) : ( <Navigate to="/dashboard" replace />)  } />
 
             <Route path="/configuracoes" element={<Configuracoes />} />
 

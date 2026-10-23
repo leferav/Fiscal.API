@@ -1,0 +1,67 @@
+.selecao-empresa-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #eaf4fc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.selecao-empresa-modal {
+  width: min(100%, 440px);
+  background: #fff;
+  border: 1px solid #dbe7f2;
+  border-radius: 14px;
+  padding: 32px;
+  box-shadow: 0 16px 45px rgba(16, 55, 92, .13);
+  color: #17365d;
+}
+
+.selecao-empresa-icone {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #e7f3fc;
+  color: #0874bd;
+  font-size: 24px;
+  margin-bottom: 16px;
+}
+
+.selecao-empresa-modal h2 { margin: 0 0 8px; font-size: 23px; }
+.selecao-empresa-modal p { margin: 0 0 24px; color: #60778d; line-height: 1.5; }
+.selecao-empresa-modal label { display: block; margin-bottom: 8px; font-weight: 600; }
+.selecao-empresa-modal select {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #17365d;
+}
+.selecao-empresa-confirmar {
+  margin-top: 20px;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: #0874bd;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+.selecao-empresa-confirmar:disabled { opacity: .55; cursor: not-allowed; }
+.selecao-empresa-sair {
+  display: block;
+  margin: 16px auto 0;
+  border: 0;
+  background: transparent;
+  color: #60778d;
+  cursor: pointer;
+}
+.selecao-empresa-erro { color: #b91c1c; font-size: 13px; margin-top: 10px; }
