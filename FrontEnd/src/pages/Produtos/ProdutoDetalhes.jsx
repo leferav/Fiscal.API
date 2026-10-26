@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { obterProdutoPorId } from "../../services/produtoService";
+import { obterUsuario } from "../../services/authService";
 import "./ProdutoDetalhes.css";
 
 export default function ProdutoDetalhes() {
   const { id } = useParams();
   const navigate = useNavigate();
-
   const [produto, setProduto] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
+  const usuario = obterUsuario();
+  const somenteConsulta = usuario?.perfil === "Consulta";
 
   useEffect(() => {
     async function carregarProduto() {
@@ -203,17 +205,18 @@ export default function ProdutoDetalhes() {
           Voltar
         </button>
 
-        <button
-        type="button"
-        className="btn btn-primary"
-        onClick={() =>
-            navigate(`/cadastros/produtos/${produto.id}/editar`)
-        }
-        >
-        <i className="bi bi-pencil" />
-        Editar produto
-        </button>
-
+        {!somenteConsulta && (
+          <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() =>
+              navigate(`/cadastros/produtos/${produto.id}/editar`)
+          }
+          >
+          <i className="bi bi-pencil" />
+          Editar produto
+          </button>
+        )}
       </section>
 
     </main>

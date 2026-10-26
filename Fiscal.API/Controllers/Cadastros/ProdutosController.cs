@@ -112,6 +112,37 @@ namespace Fiscal.API.Controllers.Cadastros
         [HttpGet("empresa/{empresaId:guid}")]
         public async Task<IActionResult> ObterPorEmpresa(Guid empresaId)
         {
+            
+            
+            
+            // Master possui acesso a todas as empresas.
+            var isMaster = User.IsInRole("Master");
+
+            if (!isMaster)
+            {
+                var empresaIdClaim = User.FindFirst("empresaId")?.Value;
+
+                if (!Guid.TryParse(empresaIdClaim, out var empresaIdToken))
+                {
+                    return Unauthorized(new
+                    {
+                        mensagem = "Empresa não identificada no token."
+                    });
+                }
+
+                if (empresaIdToken != empresaId)
+                {
+                    return Forbid();
+                }
+            }
+
+
+
+
+
+
+
+
             var produtos = await _context.Produtos
                 .AsNoTracking()
                 .Where(x =>
@@ -146,6 +177,7 @@ namespace Fiscal.API.Controllers.Cadastros
         }
 
         [HttpPost]
+        [Authorize(Roles = "Master,Administrador,Operador")]
         public async Task<IActionResult> Cadastrar([FromBody] CadastrarProdutoRequest request)
         {
             var empresaIdClaim = User.FindFirst("empresaId")?.Value;
@@ -294,6 +326,7 @@ namespace Fiscal.API.Controllers.Cadastros
         }
 
         [HttpPut("{id:guid}")]
+        [Authorize(Roles = "Master,Administrador,Operador")]
         public async Task<IActionResult> Alterar(Guid id, [FromBody] AlterarProdutoRequest request)
         {
             var empresaIdClaim = User.FindFirst("empresaId")?.Value;
@@ -426,6 +459,7 @@ namespace Fiscal.API.Controllers.Cadastros
 
         [HttpPost("{id:guid}/imagem")]
         [Consumes("multipart/form-data")]
+        [Authorize(Roles = "Master,Administrador,Operador")]
         public async Task<IActionResult> EnviarImagem( Guid id, IFormFile arquivo)
         {
             var empresaIdClaim = User.FindFirst("empresaId")?.Value;

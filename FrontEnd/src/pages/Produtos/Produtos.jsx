@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { obterProdutos } from "../../services/produtoService";
 import { useNavigate } from "react-router-dom";
+import { obterUsuario } from "../../services/authService";
 import "./Produtos.css";
 
 export default function Produtos() {
@@ -9,6 +10,8 @@ export default function Produtos() {
   const [erro, setErro] = useState("");
   const [pesquisa, setPesquisa] = useState("");
   const navigate = useNavigate();
+  const usuario = obterUsuario();
+  const somenteConsulta = usuario?.perfil === "Consulta";
 
   useEffect(() => {
     async function carregarProdutos() {
@@ -68,14 +71,16 @@ export default function Produtos() {
           </p>
         </div>
 
+      {!somenteConsulta && (
         <button
-            type="button"
-            className="btn-novo-produto"
-            onClick={() => navigate("/cadastros/produtos/novo")}
-            >
-            <i className="bi bi-plus-lg" />
-            Novo produto
+          type="button"
+          className="btn-novo-produto"
+          onClick={() => navigate("/cadastros/produtos/novo")}
+        >
+          <i className="bi bi-plus-lg" />
+          Novo produto
         </button>
+      )}
       </section>
 
       <section className="card produtos-card">

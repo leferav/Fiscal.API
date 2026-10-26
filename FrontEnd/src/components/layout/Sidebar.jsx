@@ -1,8 +1,9 @@
 import { NavLink } from "react-router-dom";
-import { podeGerenciarUsuarios } from "../../services/authService";
+import { obterUsuario, podeGerenciarUsuarios } from "../../services/authService";
 
 export default function Sidebar() {
   const exibirUsuarios = podeGerenciarUsuarios();
+  const somenteConsulta = obterUsuario()?.perfil === "Consulta";
 
   return (
     <aside className="sidebar">
@@ -18,6 +19,7 @@ export default function Sidebar() {
           <span>Dashboard</span>
         </NavLink>
 
+        {!somenteConsulta && (
         <div className="sidebar-grupo">
           <span className="sidebar-titulo">VENDAS</span>
 
@@ -42,6 +44,7 @@ export default function Sidebar() {
             <span>Emitir NFC-e</span>
           </NavLink>
         </div>
+        )}
 
         <div className="sidebar-grupo">
           <span className="sidebar-titulo">FISCAL</span>
@@ -70,6 +73,7 @@ export default function Sidebar() {
             <span>Produtos</span>
           </NavLink>
 
+          {!somenteConsulta && (
           <NavLink
             to="/cadastros/empresa"
             className={({ isActive }) =>
@@ -79,7 +83,8 @@ export default function Sidebar() {
             <i className="bi bi-people" />
             <span>Empresa</span>
           </NavLink>
-         
+          )}
+
           {exibirUsuarios && (
             <NavLink
               to="/cadastros/usuarios"
@@ -94,6 +99,7 @@ export default function Sidebar() {
 
         </div>
 
+        {!somenteConsulta && (
         <div className="sidebar-grupo">
           <span className="sidebar-titulo">SISTEMA</span>
 
@@ -107,6 +113,7 @@ export default function Sidebar() {
             <span>Configurações</span>
           </NavLink>
         </div>
+        )}
 
       </nav>
     </aside>

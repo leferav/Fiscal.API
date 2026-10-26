@@ -23,7 +23,8 @@ namespace Fiscal.API.Controllers
 
 
         [HttpPost("autorizar")]
-        public async Task<IActionResult> Autorizar( [FromBody] EmitirNFeRequest request)
+        [Authorize(Roles = "Master,Administrador,Operador")]
+        public async Task<IActionResult> Autorizar([FromBody] EmitirNFeRequest request)
         {
             var empresaIdClaim = User.FindFirst("empresaId")?.Value;
 

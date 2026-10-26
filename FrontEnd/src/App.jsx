@@ -27,7 +27,11 @@ import Usuarios from "./pages/Usuarios/Usuarios";
 function App() {
   const [autenticado, setAutenticado] = useState(estaAutenticado());
   const [empresaAtivaId, setEmpresaAtivaId] = useState( () => obterEmpresaTrabalho()?.id ?? null);
-  const master = autenticado && obterUsuario()?.perfil === "Master";
+  const perfil = obterUsuario()?.perfil;
+  const somenteConsulta = autenticado && perfil === "Consulta";
+  const rotaInicial = "/dashboard";
+  const acessoOperacional = !somenteConsulta;
+  const master = autenticado && perfil === "Master";
   const precisaSelecionarEmpresa = master && !empresaAtivaId;
 
   useEffect(() => {
@@ -82,7 +86,7 @@ function App() {
           path="/login"
           element={
             autenticado ? (
-              <Navigate to="/vendas/nfce" replace />
+              <Navigate to={rotaInicial} replace />
             ) : (
               <Login onLogin={handleLogin} />
             )
@@ -98,9 +102,9 @@ function App() {
 
             <Route path="/dashboard" element={<Dashboard />} />
 
-            <Route path="/vendas" element={<Vendas />}  />  
+            <Route path="/vendas" element={acessoOperacional ? <Vendas /> : <Navigate to="/dashboard" replace />}  />  
 
-            <Route path="/vendas/nfce" element={<EmitirNFCe onLogout={handleLogout} />}/>
+            <Route path="/vendas/nfce" element={acessoOperacional ? <EmitirNFCe onLogout={handleLogout} /> : <Navigate to="/dashboard" replace />}/>
 
             <Route path="/fiscal/notas" element={<NotasFiscais />} />
 
@@ -108,19 +112,19 @@ function App() {
 
             <Route path="/cadastros/produtos" element={<Produtos />} />
 
-            <Route path="/cadastros/produtos/novo" element={<NovoProduto />} />
+            <Route path="/cadastros/produtos/novo" element={acessoOperacional ? <NovoProduto /> : <Navigate to="/dashboard" replace />} />
 
             <Route path="/cadastros/produtos/:id" element={<ProdutoDetalhes />} />
 
-            <Route path="/cadastros/produtos/:id/editar" element={<NovoProduto />} />
+            <Route path="/cadastros/produtos/:id/editar" element={acessoOperacional ? <NovoProduto /> : <Navigate to="/dashboard" replace />} />
 
-            <Route path="/cadastros/empresa" element={<Empresa />} />
+            <Route path="/cadastros/empresa" element={acessoOperacional ? <Empresa /> : <Navigate to="/dashboard" replace />} />
 
             <Route path="/cadastros/usuarios" element={ podeGerenciarUsuarios() ? (<Usuarios /> ) : ( <Navigate to="/dashboard" replace />)  } />
 
-            <Route path="/configuracoes" element={<Configuracoes />} />
+            <Route path="/configuracoes" element={acessoOperacional ? <Configuracoes /> : <Navigate to="/dashboard" replace />} />
 
-            <Route path="/configuracoes/certificado-digital" element={<CertificadoDigital />} />
+            <Route path="/configuracoes/certificado-digital" element={acessoOperacional ? <CertificadoDigital /> : <Navigate to="/dashboard" replace />} />
 
           </Route>
         )}
@@ -130,7 +134,7 @@ function App() {
           path="*"
           element={
             <Navigate
-              to={autenticado ? "/vendas/nfce" : "/login"}
+              to={autenticado ? rotaInicial : "/login"}
               replace
             />
           }
