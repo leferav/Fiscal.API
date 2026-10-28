@@ -45,4 +45,12 @@ public class NotaFiscal
     public DateTime? AutorizadoEm { get; set; }
 
     public Empresa Empresa { get; set; } = null!;
+    public string? JustificativaCancelamento { get; set; }
+    public string? ProtocoloCancelamento { get; set; }
+    public string? XmlCancelamentoEnvio { get; set; }
+    public string? XmlCancelamentoRetorno { get; set; }
+    public int? CStatCancelamento { get; set; }
+    public string? MotivoCancelamento { get; set; }
+    public DateTime? CanceladoEm { get; set; }
+    public DateTime? CancelamentoSolicitadoEm { get; set; }
 }

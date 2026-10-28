@@ -545,6 +545,7 @@ namespace Fiscal.API.Controllers.Cadastros
                     canvas.DrawBitmap(
                         imagemOriginal,
                         new SKRect(0, 0, largura, altura),
+                        new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None),
                         paint
                     );
 

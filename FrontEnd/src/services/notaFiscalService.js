@@ -119,3 +119,24 @@ export async function emitirVendaPendente(id) {
 
   return dados;
 }
+
+
+export async function cancelarNotaFiscal(id, justificativa) {
+  const { response, dados } = await apiRequestAutenticado(
+    `/api/notas-fiscais/${encodeURIComponent(id)}/cancelar`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ justificativa }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      dados?.mensagem || dados?.erro || dados?.message ||
+      `Não foi possível solicitar o cancelamento. HTTP ${response.status}`
+    );
+  }
+
+  return dados;
+}

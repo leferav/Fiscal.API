@@ -417,6 +417,7 @@ namespace Fiscal.API.Services
                 // Após o commit, falhas de rede são INDETERMINADAS.
                 // A tentativa persiste para consulta pela chave, sem novo número.
                 using var servicoNFe = new ServicosNFe(configuracao);
+
                 RetornoNFeAutorizacao retorno;
                 try
                 {

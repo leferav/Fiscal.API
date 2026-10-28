@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { listarNotasFiscais, listarVendasPendentes, emitirVendaPendente } from "../../services/notaFiscalService";
+import { listarNotasFiscais, listarVendasPendentes, emitirVendaPendente, cancelarNotaFiscal } from "../../services/notaFiscalService";
 import { useNavigate } from "react-router-dom";
 import "./NotasFiscais.css";
 
 export default function NotasFiscais() {
   const navigate = useNavigate();
   const emissaoEmAndamento = useRef(false);
+  const cancelamentoEmAndamento = useRef(false);
+  const [notaParaCancelar, setNotaParaCancelar] = useState(null);
+  const [justificativaCancelamento, setJustificativaCancelamento] = useState("");
+  const [cancelandoId, setCancelandoId] = useState(null);
+  const [avisoCancelamento, setAvisoCancelamento] = useState("");
   const [vendaEmitindoId, setVendaEmitindoId] = useState(null);
   const [avisoEmissao, setAvisoEmissao] = useState("");
   const [notas, setNotas] = useState([]);
@@ -78,6 +83,48 @@ export default function NotasFiscais() {
       }
       emissaoEmAndamento.current = false;
       setVendaEmitindoId(null);
+    }
+  }
+
+  function abrirCancelamento(nota) {
+    if (cancelamentoEmAndamento.current || emissaoEmAndamento.current) return;
+    setNotaParaCancelar(nota);
+    setJustificativaCancelamento("");
+    setErro("");
+    setAvisoCancelamento("");
+  }
+
+  async function confirmarCancelamento(event) {
+    event.preventDefault();
+    if (!notaParaCancelar || cancelamentoEmAndamento.current) return;
+    const justificativa = justificativaCancelamento.trim();
+    if (justificativa.length < 15 || justificativa.length > 255) {
+      setErro("A justificativa deve ter entre 15 e 255 caracteres.");
+      return;
+    }
+    if (!window.confirm(`Enviar à SEFAZ o cancelamento da NFC-e ${notaParaCancelar.numero}?\n\nNão repita a operação se houver falha de comunicação.`)) return;
+
+    const id = notaParaCancelar.id;
+    cancelamentoEmAndamento.current = true;
+    setCancelandoId(id);
+    setErro("");
+    setAvisoCancelamento("");
+    try {
+      const resultado = await cancelarNotaFiscal(id, justificativa);
+      if (resultado?.confirmado) {
+        setAvisoCancelamento(`NFC-e ${notaParaCancelar.numero} cancelada pela SEFAZ. Protocolo: ${resultado.protocoloCancelamento || "não informado"}.`);
+      } else {
+        setAvisoCancelamento(`Cancelamento não confirmado pela SEFAZ. cStat ${resultado?.cStatEvento ?? "não informado"}: ${resultado?.motivo || "resultado inconclusivo"}. Situação: ${resultado?.status || "verifique a nota"}.`);
+      }
+      setNotaParaCancelar(null);
+      setJustificativaCancelamento("");
+    } catch (error) {
+      setErro(`${error.message || "Falha ao solicitar cancelamento."} Consulte a situação da NFC-e antes de tentar novamente.`);
+      setNotaParaCancelar(null);
+    } finally {
+      try { await carregarNotas(); } catch (error) { console.error("Erro ao atualizar notas:", error); }
+      cancelamentoEmAndamento.current = false;
+      setCancelandoId(null);
     }
   }
 
@@ -165,12 +212,16 @@ export default function NotasFiscais() {
           type="button"
           className="notas-btn-atualizar"
           onClick={carregarNotas}
-          disabled={carregando || vendaEmitindoId !== null}
+          disabled={carregando || vendaEmitindoId !== null || cancelandoId !== null}
         >
           <i className="bi bi-arrow-clockwise" />
           Atualizar
         </button>
       </div>
+
+      {avisoCancelamento && (
+        <div role="status" className="alert alert-info">{avisoCancelamento}</div>
+      )}
 
       {avisoEmissao && (
         <div role="status" className="alert alert-info">{avisoEmissao}</div>
@@ -268,6 +319,8 @@ export default function NotasFiscais() {
             <option value="REJEITADA">
               Rejeitadas
             </option>
+            <option value="CANCELADA">Canceladas</option>
+            <option value="CANCELAMENTO_INDETERMINADO">Cancelamento indeterminado</option>
             <option value="A_ENVIAR">
               A Enviar
             </option>
@@ -378,6 +431,7 @@ export default function NotasFiscais() {
 
                       <td>
                         {nota.tipoRegistro === "NOTA" ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <button
                         type="button"
                         className="notas-btn-acao"
@@ -388,10 +442,22 @@ export default function NotasFiscais() {
                         >
                         <i className="bi bi-eye" />
                         </button>
+                        {nota.modelo === 65 && nota.status === "AUTORIZADA" && (
+                          <button
+                            type="button"
+                            onClick={() => abrirCancelamento(nota)}
+                            disabled={carregando || vendaEmitindoId !== null || cancelandoId !== null}
+                            title="Solicitar cancelamento à SEFAZ"
+                            style={{ background: "#e06363", color: "#fff", border: 0, borderRadius: 6, padding: "8px 12px", cursor: "pointer" }}
+                          >
+                            <i className="bi bi-x-circle" />
+                          </button>
+                        )}
+                        </div>
                         ) : (
                           <button
                             type="button"
-                            disabled={carregando || vendaEmitindoId !== null}
+                            disabled={carregando || vendaEmitindoId !== null || cancelandoId !== null}
                             onClick={() => confirmarEmissao(nota)}
                             title="Emitir NFC-e desta venda pendente"
                             style={{ background: "#48a9e6", color: "white", border: 0, borderRadius: 6, padding: "8px 12px", opacity: vendaEmitindoId !== null ? 0.65 : 1, cursor: vendaEmitindoId !== null ? "wait" : "pointer" }}
@@ -407,6 +473,35 @@ export default function NotasFiscais() {
             </div>
           )}
       </section>
+
+      {notaParaCancelar && (
+        <div role="presentation" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.58)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <form onSubmit={confirmarCancelamento} role="dialog" aria-modal="true" aria-labelledby="titulo-cancelamento" style={{ background: "#fff", color: "#222", borderRadius: 12, padding: 24, width: "100%", maxWidth: 520, boxShadow: "0 12px 40px rgba(0,0,0,.25)" }}>
+            <h3 id="titulo-cancelamento">Cancelar NFC-e {notaParaCancelar.numero}</h3>
+            <p>O pedido será enviado à SEFAZ. A nota só será cancelada se o evento for aceito.</p>
+            <label htmlFor="justificativa-cancelamento" style={{ display: "block", fontWeight: 600, marginBottom: 8 }}>Justificativa (15 a 255 caracteres)</label>
+            <textarea
+              id="justificativa-cancelamento"
+              className="form-control"
+              rows={4}
+              maxLength={255}
+              minLength={15}
+              required
+              autoFocus
+              value={justificativaCancelamento}
+              onChange={(e) => setJustificativaCancelamento(e.target.value)}
+              disabled={cancelandoId !== null}
+            />
+            <small>{justificativaCancelamento.trim().length}/255 caracteres</small>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
+              <button type="button" className="btn btn-outline-secondary" disabled={cancelandoId !== null} onClick={() => { setNotaParaCancelar(null); setJustificativaCancelamento(""); }}>Voltar</button>
+              <button type="submit" className="btn btn-danger" disabled={cancelandoId !== null || justificativaCancelamento.trim().length < 15 || justificativaCancelamento.trim().length > 255}>
+                {cancelandoId !== null ? "Consultando SEFAZ..." : "Confirmar cancelamento"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </main>
   );
 }
@@ -435,7 +530,9 @@ function StatusBadge({ status }) {
   const classe =
     status === "AUTORIZADA"
       ? "autorizada"
-      : status === "REJEITADA"
+      : status === "CANCELADA"
+        ? "cancelada"
+        : status === "REJEITADA"
         ? "rejeitada"
         : status === "A_ENVIAR"
           ? "a-enviar"

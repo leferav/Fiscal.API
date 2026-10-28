@@ -121,6 +121,8 @@ builder.Services.AddScoped<ConviteUsuarioService>();
 
 builder.Services.AddScoped<NumeracaoFiscalService>();
 
+builder.Services.AddScoped<CancelamentoNFCeService>();
+
 // NFC-e
 builder.Services.AddScoped<NFCeBuilder>();
 

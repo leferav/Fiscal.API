@@ -223,6 +223,50 @@ public class VendasController : ControllerBase
         });
     }
 
+    // Cancela somente vendas que ainda não iniciaram a emissão fiscal.
+    [HttpPost("{id:guid}/cancelar")]
+    [Authorize(Roles = "Master,Administrador,Operador")]
+    public async Task<IActionResult> Cancelar(Guid id)
+    {
+        if (!Guid.TryParse(User.FindFirst("empresaId")?.Value, out var empresaId))
+        {
+            return Unauthorized(new
+            {
+                mensagem = "Empresa não identificada no token."
+            });
+        }
+
+        var agora = DateTime.UtcNow;
+
+        // A condição é aplicada diretamente no UPDATE, impedindo que
+        // cancelamento e emissão reservem a mesma venda simultaneamente.
+        var linhasAfetadas = await _context.Vendas
+            .Where(v =>
+                v.Id == id &&
+                v.EmpresaId == empresaId &&
+                v.Status == "A_ENVIAR" &&
+                v.NotaFiscalId == null)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(v => v.Status, "CANCELADA")
+                .SetProperty(v => v.AtualizadoEm, agora));
+
+        if (linhasAfetadas == 0)
+        {
+            return Conflict(new
+            {
+                mensagem = "Venda inexistente, já cancelada ou não disponível para cancelamento."
+            });
+        }
+
+        return Ok(new
+        {
+            vendaId = id,
+            status = "CANCELADA",
+            canceladaEm = agora,
+            mensagem = "Venda pendente cancelada com sucesso. Nenhum documento fiscal foi emitido."
+        });
+    }
+
     [HttpPost("{id:guid}/emitir")]
     [Authorize(Roles = "Master,Administrador,Operador")]
     public async Task<IActionResult> Emitir(Guid id)

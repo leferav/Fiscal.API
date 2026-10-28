@@ -388,6 +388,15 @@ namespace Fiscal.API.Migrations
                     b.Property<int?>("CStat")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("CStatCancelamento")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("CanceladoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("CancelamentoSolicitadoEm")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("ChaveAcesso")
                         .HasMaxLength(44)
                         .HasColumnType("character varying(44)");
@@ -398,8 +407,14 @@ namespace Fiscal.API.Migrations
                     b.Property<Guid>("EmpresaId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("JustificativaCancelamento")
+                        .HasColumnType("text");
+
                     b.Property<short>("Modelo")
                         .HasColumnType("smallint");
+
+                    b.Property<string>("MotivoCancelamento")
+                        .HasColumnType("text");
 
                     b.Property<long>("Numero")
                         .HasColumnType("bigint");
@@ -407,6 +422,9 @@ namespace Fiscal.API.Migrations
                     b.Property<string>("Protocolo")
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
+
+                    b.Property<string>("ProtocoloCancelamento")
+                        .HasColumnType("text");
 
                     b.Property<string>("Recibo")
                         .HasMaxLength(30)
@@ -432,6 +450,12 @@ namespace Fiscal.API.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("XmlAutorizado")
+                        .HasColumnType("text");
+
+                    b.Property<string>("XmlCancelamentoEnvio")
+                        .HasColumnType("text");
+
+                    b.Property<string>("XmlCancelamentoRetorno")
                         .HasColumnType("text");
 
                     b.Property<string>("XmlEnvio")

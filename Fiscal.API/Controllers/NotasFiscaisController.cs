@@ -1,4 +1,5 @@
-﻿using Fiscal.API.Data;
+using Fiscal.API.Services;
+using Fiscal.API.Data;
 using Fiscal.API.DTOs.NotasFiscais;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,10 +15,12 @@ namespace Fiscal.API.Controllers;
 public class NotasFiscaisController : ControllerBase
 {
     private readonly FiscalDbContext _context;
+    private readonly CancelamentoNFCeService _cancelamento;
 
-    public NotasFiscaisController(FiscalDbContext context)
+    public NotasFiscaisController(FiscalDbContext context, CancelamentoNFCeService cancelamento)
     {
         _context = context;
+        _cancelamento = cancelamento;
     }
 
     [HttpGet]
@@ -234,4 +237,24 @@ public class NotasFiscaisController : ControllerBase
         );
 
     }
+    [HttpPost("{id:guid}/cancelar")]
+    [Authorize(Roles = "Master,Administrador,Operador")]
+    public async Task<IActionResult> Cancelar(Guid id, [FromBody] CancelarNFCeRequest request)
+    {
+        if (!Guid.TryParse(User.FindFirstValue("empresaId"), out var empresaId))
+            return Unauthorized(new { mensagem = "Empresa não identificada no token." });
+        try
+        {
+            var resultado = await _cancelamento.CancelarAsync(empresaId, id, request?.Justificativa);
+            return Ok(resultado);
+        }
+        catch (ArgumentException ex) { return BadRequest(new { mensagem = ex.Message }); }
+        catch (KeyNotFoundException ex) { return NotFound(new { mensagem = ex.Message }); }
+        catch (InvalidOperationException ex) { return Conflict(new { mensagem = ex.Message }); }
+        // Outras exceções são tratadas pelo middleware global; não repetir o POST.
+    }
+}
+public sealed class CancelarNFCeRequest
+{
+    public string? Justificativa { get; set; }
 }
