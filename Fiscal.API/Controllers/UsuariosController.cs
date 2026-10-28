@@ -109,21 +109,6 @@ public class UsuariosController : ControllerBase
         if (!empresaExiste)
             return BadRequest("Empresa não encontrada.");
 
-        if (perfil == "Administrador")
-        {
-            var jaExisteAdministrador =
-                await _context.UsuariosEmpresas
-                    .AnyAsync(x =>
-                        x.EmpresaId == empresaId &&
-                        x.Perfil == "Administrador" &&
-                        x.Ativo);
-
-            if (jaExisteAdministrador)
-            {
-                return Conflict( MensagensErro.AdministradorExistente);
-            }
-        }
-
         var nome = request.Nome?.Trim();
         var email = request.Email?.Trim().ToLowerInvariant();
 
@@ -355,32 +340,24 @@ public class UsuariosController : ControllerBase
         if (!master && perfil == "Administrador")
             return Forbid();
 
-        // Impedir que uma empresa tenha dois Administradores.
-        if (perfil == "Administrador" &&
-            vinculo.Perfil != "Administrador")
-        {
-            var existeAdministrador =
-                await _context.UsuariosEmpresas
-                    .AnyAsync(x =>
-                        x.EmpresaId == empresaId &&
-                        x.UsuarioId != id &&
-                        x.Perfil == "Administrador" &&
-                        x.Ativo);
-
-            if (existeAdministrador)
-            {
-                return Conflict(
-                    "Esta empresa já possui um Administrador.");
-            }
-        }
-
-        // Evitar deixar a empresa sem Administrador
-        // ao trocar o perfil do Administrador atual.
+        // Impedir a alteração do perfil do último Administrador ativo.
         if (vinculo.Perfil == "Administrador" &&
+            vinculo.Ativo &&
             perfil != "Administrador")
         {
-            return Conflict(
-                "Substitua o Administrador antes de alterar seu perfil.");
+            var outrosAdministradores = await _context.UsuariosEmpresas
+                .AnyAsync(x =>
+                    x.EmpresaId == empresaId &&
+                    x.UsuarioId != id &&
+                    x.Perfil == "Administrador" &&
+                    x.Ativo &&
+                    x.Usuario.Ativo);
+
+            if (!outrosAdministradores)
+            {
+                return Conflict(
+                    "Não é permitido alterar o perfil do último Administrador ativo da empresa.");
+            }
         }
 
         var nome = request.Nome?.Trim();
@@ -503,14 +480,24 @@ public class UsuariosController : ControllerBase
             return Forbid();
         }
 
-        // Preservar o Administrador da empresa.
-        // A substituição será um fluxo separado.
+        // Impedir a desativação do último Administrador ativo.
         if (vinculo.Perfil == "Administrador" &&
+            vinculo.Ativo &&
             !request.Ativo.Value)
         {
-            return Conflict(
-                "Não é permitido desativar o Administrador. " +
-                "Realize a substituição primeiro.");
+            var outrosAdministradores = await _context.UsuariosEmpresas
+                .AnyAsync(x =>
+                    x.EmpresaId == empresaId &&
+                    x.UsuarioId != id &&
+                    x.Perfil == "Administrador" &&
+                    x.Ativo &&
+                    x.Usuario.Ativo);
+
+            if (!outrosAdministradores)
+            {
+                return Conflict(
+                    "Não é permitido desativar o último Administrador ativo da empresa.");
+            }
         }
 
         if (vinculo.Ativo == request.Ativo.Value)

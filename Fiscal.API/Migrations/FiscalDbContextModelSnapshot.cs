@@ -539,6 +539,95 @@ namespace Fiscal.API.Migrations
                     b.ToTable("produtos_imagens", (string)null);
                 });
 
+            modelBuilder.Entity("Fiscal.API.Models.Database.Venda", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AtualizadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CpfConsumidor")
+                        .HasMaxLength(11)
+                        .HasColumnType("character varying(11)");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FormaPagamento")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<Guid?>("NotaFiscalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<decimal>("ValorTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NotaFiscalId")
+                        .IsUnique();
+
+                    b.HasIndex("EmpresaId", "Status");
+
+                    b.ToTable("vendas", (string)null);
+                });
+
+            modelBuilder.Entity("Fiscal.API.Models.Database.VendaItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CodigoProduto")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("DescricaoProduto")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("ProdutoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Quantidade")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<decimal>("ValorTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("ValorUnitario")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("VendaId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProdutoId");
+
+                    b.HasIndex("VendaId");
+
+                    b.ToTable("vendas_itens", (string)null);
+                });
+
             modelBuilder.Entity("Fiscal.API.Models.Usuario", b =>
                 {
                     b.Property<Guid>("Id")
@@ -714,6 +803,43 @@ namespace Fiscal.API.Migrations
                     b.Navigation("Produto");
                 });
 
+            modelBuilder.Entity("Fiscal.API.Models.Database.Venda", b =>
+                {
+                    b.HasOne("Fiscal.API.Models.Database.Empresa", "Empresa")
+                        .WithMany()
+                        .HasForeignKey("EmpresaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Fiscal.API.Models.Database.NotaFiscal", "NotaFiscal")
+                        .WithMany()
+                        .HasForeignKey("NotaFiscalId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Empresa");
+
+                    b.Navigation("NotaFiscal");
+                });
+
+            modelBuilder.Entity("Fiscal.API.Models.Database.VendaItem", b =>
+                {
+                    b.HasOne("Fiscal.API.Models.Database.Produto", "Produto")
+                        .WithMany()
+                        .HasForeignKey("ProdutoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Fiscal.API.Models.Database.Venda", "Venda")
+                        .WithMany("Itens")
+                        .HasForeignKey("VendaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Produto");
+
+                    b.Navigation("Venda");
+                });
+
             modelBuilder.Entity("Fiscal.API.Models.Usuario", b =>
                 {
                     b.HasOne("Fiscal.API.Models.Database.Empresa", "Empresa")
@@ -772,6 +898,11 @@ namespace Fiscal.API.Migrations
             modelBuilder.Entity("Fiscal.API.Models.Database.Produto", b =>
                 {
                     b.Navigation("ImagemProduto");
+                });
+
+            modelBuilder.Entity("Fiscal.API.Models.Database.Venda", b =>
+                {
+                    b.Navigation("Itens");
                 });
 
             modelBuilder.Entity("Fiscal.API.Models.Usuario", b =>

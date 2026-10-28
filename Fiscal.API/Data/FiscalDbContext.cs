@@ -13,6 +13,8 @@ public class FiscalDbContext : DbContext
     public DbSet<CertificadoDigitalArquivo> CertificadosDigitaisArquivos => Set<CertificadoDigitalArquivo>();
     public DbSet<ConfiguracaoFiscal> ConfiguracoesFiscais => Set<ConfiguracaoFiscal>();
     public DbSet<NotaFiscal> NotasFiscais => Set<NotaFiscal>();
+    public DbSet<Venda> Vendas => Set<Venda>();
+    public DbSet<VendaItem> VendasItens => Set<VendaItem>();
     public DbSet<ConfiguracaoTributaria> ConfiguracoesTributarias => Set<ConfiguracaoTributaria>();
     public DbSet<Produto> Produtos => Set<Produto>();
     public DbSet<ProdutoImagem> ProdutosImagens => Set<ProdutoImagem>();
@@ -30,6 +32,8 @@ public class FiscalDbContext : DbContext
         ConfigurarCertificadoDigitalArquivo(modelBuilder);
         ConfigurarConfiguracaoFiscal(modelBuilder);
         ConfigurarNotaFiscal(modelBuilder);
+        ConfigurarVenda(modelBuilder);
+        ConfigurarVendaItem(modelBuilder);
         ConfigurarConfiguracaoTributaria(modelBuilder);
         ConfigurarProduto(modelBuilder);
         ConfigurarProdutoImagem(modelBuilder);   
@@ -229,6 +233,61 @@ public class FiscalDbContext : DbContext
         entity.HasOne(x => x.Empresa)
             .WithMany(x => x.NotasFiscais)
             .HasForeignKey(x => x.EmpresaId);
+    }
+
+    private static void ConfigurarVenda(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<Venda>();
+
+        entity.ToTable("vendas");
+        entity.HasKey(x => x.Id);
+
+        entity.Property(x => x.Status).HasMaxLength(30).IsRequired();
+        entity.Property(x => x.FormaPagamento).HasMaxLength(2).IsRequired();
+        entity.Property(x => x.CpfConsumidor).HasMaxLength(11);
+        entity.Property(x => x.ValorTotal).HasPrecision(18, 2);
+        entity.Property(x => x.CriadoEm).HasColumnType("timestamp with time zone");
+        entity.Property(x => x.AtualizadoEm).HasColumnType("timestamp with time zone");
+
+        entity.HasIndex(x => new { x.EmpresaId, x.Status });
+        entity.HasIndex(x => x.NotaFiscalId).IsUnique();
+
+        entity.HasOne(x => x.Empresa)
+            .WithMany()
+            .HasForeignKey(x => x.EmpresaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasOne(x => x.NotaFiscal)
+            .WithMany()
+            .HasForeignKey(x => x.NotaFiscalId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigurarVendaItem(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<VendaItem>();
+
+        entity.ToTable("vendas_itens");
+        entity.HasKey(x => x.Id);
+
+        entity.Property(x => x.CodigoProduto).HasMaxLength(50).IsRequired();
+        entity.Property(x => x.DescricaoProduto).HasMaxLength(200).IsRequired();
+        entity.Property(x => x.Quantidade).HasPrecision(18, 4);
+        entity.Property(x => x.ValorUnitario).HasPrecision(18, 2);
+        entity.Property(x => x.ValorTotal).HasPrecision(18, 2);
+
+        entity.HasIndex(x => x.VendaId);
+        entity.HasIndex(x => x.ProdutoId);
+
+        entity.HasOne(x => x.Venda)
+            .WithMany(x => x.Itens)
+            .HasForeignKey(x => x.VendaId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        entity.HasOne(x => x.Produto)
+            .WithMany()
+            .HasForeignKey(x => x.ProdutoId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigurarConfiguracaoTributaria(ModelBuilder modelBuilder)

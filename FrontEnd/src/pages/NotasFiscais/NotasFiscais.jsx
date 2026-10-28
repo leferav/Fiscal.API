@@ -1,11 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
-import { listarNotasFiscais } from "../../services/notaFiscalService";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { listarNotasFiscais, listarVendasPendentes, emitirVendaPendente } from "../../services/notaFiscalService";
 import { useNavigate } from "react-router-dom";
 import "./NotasFiscais.css";
 
 export default function NotasFiscais() {
   const navigate = useNavigate();
+  const emissaoEmAndamento = useRef(false);
+  const [vendaEmitindoId, setVendaEmitindoId] = useState(null);
+  const [avisoEmissao, setAvisoEmissao] = useState("");
   const [notas, setNotas] = useState([]);
+  const [vendasPendentes, setVendasPendentes] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
   const [pesquisa, setPesquisa] = useState("");
@@ -21,8 +25,12 @@ export default function NotasFiscais() {
       setCarregando(true);
       setErro("");
 
-      const dados = await listarNotasFiscais();
-      setNotas(dados);
+      const [dadosNotas, dadosVendas] = await Promise.all([
+        listarNotasFiscais(),
+        listarVendasPendentes(),
+      ]);
+      setNotas(dadosNotas);
+      setVendasPendentes(dadosVendas);
     } catch (error) {
       console.error("Erro ao carregar notas fiscais:", error);
 
@@ -32,6 +40,44 @@ export default function NotasFiscais() {
       );
     } finally {
       setCarregando(false);
+    }
+  }
+
+  async function confirmarEmissao(venda) {
+    if (emissaoEmAndamento.current || carregando) return;
+    if (!window.confirm(
+      `Transmitir a venda ${venda.id.slice(0, 8)} (${formatarMoeda(venda.valorTotal)}) à SEFAZ?\n\nNão repita a operação se houver falha de comunicação.`
+    )) return;
+
+    emissaoEmAndamento.current = true;
+    setVendaEmitindoId(venda.id);
+    setAvisoEmissao("");
+    setErro("");
+
+    try {
+      const resultado = await emitirVendaPendente(venda.id);
+      if (resultado?.sucesso) {
+        setAvisoEmissao(`NFC-e ${resultado.numero} autorizada. Protocolo: ${resultado.protocolo || "não informado"}.`);
+      } else {
+        setAvisoEmissao(
+          `A SEFAZ retornou cStat ${resultado?.cStat ?? "não informado"}. ` +
+          `Situação: ${resultado?.motivo || "consulte o registro fiscal antes de tentar novamente"}.`
+        );
+      }
+    } catch (error) {
+      setErro(
+        `${error.message || "Falha ao emitir venda."} ` +
+        "Verifique a situação da venda e da NFC-e antes de qualquer nova tentativa."
+      );
+    } finally {
+      // Atualiza inclusive em caso de timeout: a venda pode ter sido transmitida.
+      try {
+        await carregarNotas();
+      } catch (error) {
+        console.error("Erro ao atualizar a listagem:", error);
+      }
+      emissaoEmAndamento.current = false;
+      setVendaEmitindoId(null);
     }
   }
 
@@ -58,15 +104,27 @@ export default function NotasFiscais() {
     };
   }, [notas]);
 
+  const documentos = useMemo(() => [
+    ...notas.map((nota) => ({ ...nota, tipoRegistro: "NOTA" })),
+    ...vendasPendentes.map((venda) => ({
+      ...venda,
+      tipoRegistro: "VENDA",
+      modelo: 65,
+      numero: null,
+      serie: null,
+      cStat: null,
+    })),
+  ].sort((a, b) => new Date(b.criadoEm) - new Date(a.criadoEm)), [notas, vendasPendentes]);
+
   const notasFiltradas = useMemo(() => {
     const termo = pesquisa
       .trim()
       .toLowerCase();
 
-    return notas.filter((nota) => {
+    return documentos.filter((nota) => {
       const correspondePesquisa =
         !termo ||
-        String(nota.numero ?? "")
+        String(nota.numero ?? (nota.tipoRegistro === "VENDA" ? nota.id : ""))
           .toLowerCase()
           .includes(termo);
 
@@ -84,7 +142,7 @@ export default function NotasFiscais() {
         correspondeModelo
       );
     });
-  }, [notas, pesquisa, status, modelo]);
+  }, [documentos, pesquisa, status, modelo]);
 
   return (
     <main className="conteudo notas-pagina">
@@ -107,12 +165,16 @@ export default function NotasFiscais() {
           type="button"
           className="notas-btn-atualizar"
           onClick={carregarNotas}
-          disabled={carregando}
+          disabled={carregando || vendaEmitindoId !== null}
         >
           <i className="bi bi-arrow-clockwise" />
           Atualizar
         </button>
       </div>
+
+      {avisoEmissao && (
+        <div role="status" className="alert alert-info">{avisoEmissao}</div>
+      )}
 
       {/* RESUMO */}
       <section className="notas-resumo">
@@ -206,6 +268,9 @@ export default function NotasFiscais() {
             <option value="REJEITADA">
               Rejeitadas
             </option>
+            <option value="A_ENVIAR">
+              A Enviar
+            </option>
           </select>
         </div>
       </section>
@@ -218,7 +283,7 @@ export default function NotasFiscais() {
               DOCUMENTOS
             </span>
 
-            <h3>Notas emitidas</h3>
+            <h3>Notas fiscais e vendas pendentes</h3>
           </div>
 
           <span className="notas-quantidade">
@@ -267,19 +332,26 @@ export default function NotasFiscais() {
 
                 <tbody>
                   {notasFiltradas.map((nota) => (
-                    <tr key={nota.id}>
+                    <tr
+                      key={`${nota.tipoRegistro}-${nota.id}`}
+                      className={
+                        nota.tipoRegistro === "VENDA"
+                          ? "notas-linha-pendente"
+                          : ""
+                      }
+                    >
                       <td>
                         <div className="notas-numero">
-                          {nota.numero}
+                          {nota.tipoRegistro === "VENDA" ? "Venda pendente" : nota.numero}
                         </div>
 
                         <small>
-                          Série {nota.serie}
+                          {nota.tipoRegistro === "VENDA" ? `Ref. ${nota.id.slice(0, 8)}` : `Série ${nota.serie}`}
                         </small>
                       </td>
 
                       <td>
-                        {obterModelo(nota.modelo)}
+                        {nota.tipoRegistro === "VENDA" ? "NFC-e (a emitir)" : obterModelo(nota.modelo)}
                       </td>
 
                       <td>
@@ -305,6 +377,7 @@ export default function NotasFiscais() {
                       </td>
 
                       <td>
+                        {nota.tipoRegistro === "NOTA" ? (
                         <button
                         type="button"
                         className="notas-btn-acao"
@@ -315,6 +388,17 @@ export default function NotasFiscais() {
                         >
                         <i className="bi bi-eye" />
                         </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={carregando || vendaEmitindoId !== null}
+                            onClick={() => confirmarEmissao(nota)}
+                            title="Emitir NFC-e desta venda pendente"
+                            style={{ background: "#48a9e6", color: "white", border: 0, borderRadius: 6, padding: "8px 12px", opacity: vendaEmitindoId !== null ? 0.65 : 1, cursor: vendaEmitindoId !== null ? "wait" : "pointer" }}
+                          >
+                            <i className={`bi ${vendaEmitindoId === nota.id ? "bi-arrow-repeat" : "bi-send"}`} /> {vendaEmitindoId === nota.id ? "Emitindo..." : "A Enviar"}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -353,7 +437,9 @@ function StatusBadge({ status }) {
       ? "autorizada"
       : status === "REJEITADA"
         ? "rejeitada"
-        : "outro";
+        : status === "A_ENVIAR"
+          ? "a-enviar"
+          : "outro";
 
   return (
     <span

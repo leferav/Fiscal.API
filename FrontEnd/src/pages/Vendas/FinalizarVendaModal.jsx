@@ -9,6 +9,7 @@ export default function FinalizarVendaModal({
   onFechar,
   onCancelarVenda,
   onConfirmar,
+  onEnviarDepois,
 }) {
   const [formaPagamento, setFormaPagamento] = useState("01");
   const [cpf, setCpf] = useState("");
@@ -132,6 +133,19 @@ export default function FinalizarVendaModal({
       formaPagamento,
       cpf: cpfNumeros || null,
     });
+  }
+
+  function handleEnviarDepois() {
+    if (emitindo) return;
+
+    const cpfNumeros = cpf.replace(/\D/g, "");
+    if (cpfNumeros && !cpfValido(cpfNumeros)) {
+      setErroCpf("O CPF informado é inválido. Verifique os números digitados.");
+      return;
+    }
+
+    setErroCpf("");
+    onEnviarDepois?.({ formaPagamento, cpf: cpfNumeros || null });
   }
 
   /* ============================================================
@@ -296,6 +310,21 @@ export default function FinalizarVendaModal({
           >
             <i className="bi bi-x-circle" />
             Cancelar Venda
+          </button>
+
+          {/* SALVAR PARA EMISSÃO POSTERIOR */}
+          <button
+            type="button"
+            className="btn-a-enviar"
+            style={{ backgroundColor: "#48a9e6", color: "#fff", border: "none", borderRadius: 8, padding: "12px 16px", fontWeight: 600, cursor: emitindo ? "not-allowed" : "pointer" }}
+            onClick={handleEnviarDepois}
+            disabled={emitindo || !onEnviarDepois}
+          >
+            {emitindo ? "Processando..." : (
+              <>
+                <i className="bi bi-clock-history" /> A Enviar
+              </>
+            )}
           </button>
 
           {/* EMITIR NFC-e */}

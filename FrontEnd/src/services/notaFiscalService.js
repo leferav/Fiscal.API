@@ -80,3 +80,42 @@ export async function baixarDanfeNotaFiscal(id) {
 
   return response.blob();
 }
+
+export async function listarVendasPendentes() {
+  const { response, dados } = await apiRequestAutenticado(
+    "/api/vendas/pendentes",
+    {
+      method: "GET",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      dados?.mensagem ||
+      dados?.erro ||
+      dados?.message ||
+      `Erro ao consultar vendas pendentes. HTTP ${response.status}`
+    );
+  }
+
+  return dados?.vendas ?? [];
+}
+
+
+export async function emitirVendaPendente(id) {
+  const { response, dados } = await apiRequestAutenticado(
+    `/api/vendas/${encodeURIComponent(id)}/emitir`,
+    { method: "POST" }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      dados?.mensagem ||
+      dados?.erro ||
+      dados?.message ||
+      `Não foi possível concluir a emissão. HTTP ${response.status}`
+    );
+  }
+
+  return dados;
+}

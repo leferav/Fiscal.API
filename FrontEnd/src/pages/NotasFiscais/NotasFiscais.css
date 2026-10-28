@@ -498,3 +498,28 @@
     width: 100%;
   }
 }
+
+
+
+/* Linha de venda pendente */
+.notas-tabela tbody tr.notas-linha-pendente > td {
+    background-color: #eaf5ff;
+    border-bottom-color: #cfe5f8;
+}
+
+/* Ao passar o mouse */
+.notas-tabela tbody tr.notas-linha-pendente:hover > td {
+    background-color: #d9edff;
+}
+
+/* Faixa azul na lateral esquerda */
+.notas-tabela tbody tr.notas-linha-pendente > td:first-child {
+    border-left: 4px solid #48a9e6;
+}
+
+
+.notas-status.a-enviar {
+    background-color: #021672;
+    color: #eeff00;
+    font-weight: 700;
+}

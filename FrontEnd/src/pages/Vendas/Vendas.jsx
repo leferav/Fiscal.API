@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { obterProdutos, obterImagemProduto } from "../../services/produtoService";
 import FinalizarVendaModal from "./FinalizarVendaModal";
-import { autorizarNFCe } from "../../services/fiscalApi";
+import { autorizarNFCe, salvarVendaPendente } from "../../services/fiscalApi";
 import { obterEmpresaId } from "../../services/authService";
 import "./Vendas.css";
 
@@ -194,6 +194,44 @@ export default function Vendas() {
         item.quantidade,
     0
     );  
+
+    async function enviarDepois(dados) {
+        if (itens.length === 0 || emitindo) return;
+
+        if (!empresaId) {
+            setErroEmissao("Empresa da sessão não encontrada.");
+            return;
+        }
+
+        const request = {
+            formaPagamento: dados.formaPagamento,
+            cpfConsumidor: dados.cpf || null,
+            produtos: itens.map((item) => ({
+                produtoId: item.id,
+                quantidade: item.quantidade,
+            })),
+        };
+
+        try {
+            setEmitindo(true);
+            setErroEmissao("");
+
+            const resultado = await salvarVendaPendente(request);
+            if (resultado?.status !== "A_ENVIAR" || !resultado?.id) {
+                throw new Error("Não foi possível confirmar o salvamento da venda.");
+            }
+
+            setItens([]);
+            setPesquisa("");
+            setModalFinalizarAberto(false);
+            alert("Venda salva com sucesso para emissão posterior.");
+        } catch (error) {
+            console.error("Erro ao salvar venda pendente:", error);
+            setErroEmissao(error.message || "Não foi possível salvar a venda.");
+        } finally {
+            setEmitindo(false);
+        }
+    }
 
     async function finalizarVenda(dados) {
     if (itens.length === 0 || emitindo) {
@@ -511,6 +549,7 @@ export default function Vendas() {
             setModalFinalizarAberto(false);
             }
         }}
+    onEnviarDepois={enviarDepois}
     onConfirmar={finalizarVenda}
     />
 

@@ -119,6 +119,8 @@ builder.Services.AddScoped<NFeXmlService>();
 builder.Services.AddHttpClient<EmailService>();
 builder.Services.AddScoped<ConviteUsuarioService>();
 
+builder.Services.AddScoped<NumeracaoFiscalService>();
+
 // NFC-e
 builder.Services.AddScoped<NFCeBuilder>();
 
