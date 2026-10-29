@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { obterProdutosPorEmpresa, autorizarNFCe,} from "../../services/fiscalApi";
 import { obterEmpresaId, } from "../../services/authService";
+import { obterClientes } from "../../services/clienteService";
 import "./EmitirNFCe.css";
 
 export default function EmitirNFCe({ onLogout }) {
   const [busca, setBusca] = useState("");
   const [itens, setItens] = useState([]);
   const [cpfConsumidor, setCpfConsumidor] = useState("");
+  const [clientesDisponiveis, setClientesDisponiveis] = useState([]);
+  const [buscaCliente, setBuscaCliente] = useState("");
+  const [clienteSelecionado, setClienteSelecionado] = useState(null);
+  const [carregandoClientes, setCarregandoClientes] = useState(true);
+  const [erroClientes, setErroClientes] = useState("");
+  const [exibirClientes, setExibirClientes] = useState(false);
   const [produtosDisponiveis, setProdutosDisponiveis] = useState([]);
   const [carregandoProdutos, setCarregandoProdutos] = useState(true);
   const [erroProdutos, setErroProdutos] = useState("");
@@ -55,6 +62,59 @@ export default function EmitirNFCe({ onLogout }) {
 
     carregarProdutos();
   }, [empresaId]);
+
+  /* ============================================================
+     CLIENTES CADASTRADOS (mesma empresa do token)
+  ============================================================ */
+  useEffect(() => {
+    let ativo = true;
+    setClienteSelecionado(null);
+    setBuscaCliente("");
+    setClientesDisponiveis([]);
+    async function carregarClientes() {
+      try {
+        setCarregandoClientes(true);
+        setErroClientes("");
+        const dados = await obterClientes();
+        if (ativo) setClientesDisponiveis(Array.isArray(dados) ? dados : dados?.clientes || dados?.itens || []);
+      } catch (error) {
+        if (ativo) setErroClientes(error.message || "Não foi possível carregar os clientes.");
+      } finally {
+        if (ativo) setCarregandoClientes(false);
+      }
+    }
+    if (empresaId) carregarClientes();
+    else setCarregandoClientes(false);
+    return () => { ativo = false; };
+  }, [empresaId]);
+
+  const clientesFiltrados = useMemo(() => {
+    const termo = buscaCliente.trim().toLowerCase();
+    const digitos = termo.replace(/\D/g, "");
+    return clientesDisponiveis.filter((cliente) => cliente.ativo !== false &&
+      (!termo || String(cliente.nomeRazaoSocial || "").toLowerCase().includes(termo) ||
+        (digitos && String(cliente.cpfCnpj || "").replace(/\D/g, "").includes(digitos)))).slice(0, 30);
+  }, [buscaCliente, clientesDisponiveis]);
+
+  function selecionarCliente(cliente) {
+    setClienteSelecionado(cliente);
+    setBuscaCliente("");
+    setCpfConsumidor("");
+    setExibirClientes(false);
+  }
+
+  function limparCliente() {
+    setClienteSelecionado(null);
+    setBuscaCliente("");
+    setExibirClientes(false);
+  }
+
+  function formatarDocumentoCliente(valor) {
+    const d = String(valor || "").replace(/\D/g, "");
+    if (d.length === 11) return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    if (d.length === 14) return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+    return valor || "";
+  }
 
   /* ============================================================
      FILTRAR PRODUTOS
@@ -176,6 +236,7 @@ export default function EmitirNFCe({ onLogout }) {
     setItens([]);
     setBusca("");
     setCpfConsumidor("");
+    limparCliente();
     setResultadoEmissao(null);
     setErroEmissao("");
     inputBuscaRef.current?.focus();
@@ -268,7 +329,7 @@ export default function EmitirNFCe({ onLogout }) {
 
     const cpf = obterCpfSomenteNumeros();
 
-    if (cpf && !cpfValido(cpf)) {
+    if (!clienteSelecionado && cpf && !cpfValido(cpf)) {
       setErroEmissao(
         "O CPF informado é inválido. Verifique os números digitados."
       );
@@ -282,6 +343,7 @@ export default function EmitirNFCe({ onLogout }) {
 
     const request = {
       empresaId,
+      clienteId: clienteSelecionado?.id || null,
       destinatario: {
         cpfCnpj: cpf || null,
       },
@@ -311,6 +373,7 @@ export default function EmitirNFCe({ onLogout }) {
         setItens([]);
         setBusca("");
         setCpfConsumidor("");
+        limparCliente();
         setResultadoEmissao(null);
         setErroEmissao("");
 
@@ -444,10 +507,42 @@ export default function EmitirNFCe({ onLogout }) {
                   inputMode="numeric"
                   autoComplete="off"
                   maxLength={14}
+                  disabled={Boolean(clienteSelecionado)}
                 />
               </div>
             </div>
           </div>
+        </section>
+
+        {/* CLIENTE CADASTRADO - dados apenas para leitura */}
+        <section className="card nfce-cliente-card">
+          <div className="nfce-cliente-titulo"><i className="bi bi-person-vcard" /><div><span className="label-azul">DESTINATÁRIO</span><h2>Cliente cadastrado <small>(opcional)</small></h2></div></div>
+          {erroClientes && <div className="alert alert-warning">{erroClientes}</div>}
+          {clienteSelecionado ? (
+            <div className="nfce-cliente-selecionado">
+              <div className="nfce-cliente-dados">
+                <strong>{clienteSelecionado.nomeRazaoSocial}</strong>
+                <span>{formatarDocumentoCliente(clienteSelecionado.cpfCnpj)} · {clienteSelecionado.tipoPessoa === "PJ" ? "Pessoa jurídica" : "Pessoa física"}</span>
+                {(clienteSelecionado.cidade || clienteSelecionado.uf) && <span>{[clienteSelecionado.cidade, clienteSelecionado.uf].filter(Boolean).join(" / ")}</span>}
+                <small>Dados do cadastro — edição disponível em Cadastros → Clientes.</small>
+              </div>
+              <button type="button" className="btn btn-outline-secondary" onClick={limparCliente} disabled={emitindo}>Trocar / remover</button>
+            </div>
+          ) : (
+            <div className="nfce-cliente-pesquisa">
+              <input type="text" className="form-control" value={buscaCliente} onChange={e => { setBuscaCliente(e.target.value); setExibirClientes(true); }} onFocus={() => setExibirClientes(true)} placeholder={carregandoClientes ? "Carregando clientes..." : "Pesquisar por nome, CPF ou CNPJ..."} disabled={carregandoClientes || emitindo} autoComplete="off" aria-label="Pesquisar cliente cadastrado" />
+              {exibirClientes && !carregandoClientes && (
+                <div className="nfce-cliente-resultados">
+                  {clientesFiltrados.length === 0 ? <div className="nfce-cliente-vazio">Nenhum cliente encontrado.</div> : clientesFiltrados.map(cliente => (
+                    <button key={cliente.id} type="button" onClick={() => selecionarCliente(cliente)}>
+                      <strong>{cliente.nomeRazaoSocial}</strong><span>{formatarDocumentoCliente(cliente.cpfCnpj)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <small>Sem cliente cadastrado, você ainda pode informar o CPF no campo acima.</small>
+            </div>
+          )}
         </section>
 
         {/* ERRO DA EMISSÃO */}

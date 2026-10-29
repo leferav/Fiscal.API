@@ -65,7 +65,8 @@ namespace Fiscal.API.Services.NFCe
             // Destinatário / CPF na nota
             MontarDestinatario(
                 nfce,
-                destinatario
+                destinatario,
+                configuracaoFiscal
             );
 
             // Produtos
@@ -98,50 +99,78 @@ namespace Fiscal.API.Services.NFCe
         }
 
         // ============================================================
-        // Destinatário da NFC-e
-        // CPF na nota é opcional
+        // Destinatário da NFC-e: CPF ou CNPJ, sem inscrição estadual.
+        // Sem documento informado, a NFC-e permanece sem destinatário.
         // ============================================================
-        private void MontarDestinatario(
-            global::NFe.Classes.NFe nfce,
-            DestinatarioRequest? destinatario)
+        private void MontarDestinatario( global::NFe.Classes.NFe nfce, DestinatarioRequest? destinatario, ConfiguracaoFiscal configuracaoFiscal)
         {
             if (destinatario == null ||
                 string.IsNullOrWhiteSpace(destinatario.CpfCnpj))
-            {
                 return;
+
+            var documento = new string(destinatario.CpfCnpj
+                .Where(char.IsDigit).ToArray());
+
+            if (documento.Length == 11)
+            {
+                if (!CpfValido(documento))
+                    throw new InvalidOperationException("O CPF informado é inválido.");
+            }
+            else if (documento.Length == 14)
+            {
+                if (!CnpjValido(documento))
+                    throw new InvalidOperationException("O CNPJ informado é inválido.");
+            }
+            else
+            {
+                throw new InvalidOperationException("O destinatário deve possuir CPF (11 dígitos) ou CNPJ (14 dígitos).");
             }
 
-            // Remove pontos, traços, barras etc.
-            var documento = new string(
-                destinatario.CpfCnpj
-                    .Where(char.IsDigit)
-                    .ToArray()
-            );
-
-            // valida CPF.
-            if (!CpfValido(documento))
+            var destino = new dest(VersaoServico.Versao400)
             {
-                throw new Exception(
-                    "O CPF informado é inválido."
-                );
-            }
-
-            nfce.infNFe.dest = new dest(
-                VersaoServico.Versao400
-            )
-            {
-                CPF = documento,
-
-                indIEDest =
-                    indIEDest.NaoContribuinte
+                indIEDest = indIEDest.NaoContribuinte
             };
 
-            // Nome é opcional para nosso fluxo atual.
-            if (!string.IsNullOrWhiteSpace(destinatario.Nome))
+            if (documento.Length == 11)
+                destino.CPF = documento;
+            else
+                destino.CNPJ = documento;
+
+            // Garante que o destinatário foi instanciado
+            nfce.infNFe.dest ??= new dest(VersaoServico.Versao400);
+
+            if (configuracaoFiscal.Ambiente == 2)
             {
-                nfce.infNFe.dest.xNome =
-                    destinatario.Nome.Trim();
+                destino.xNome =
+                    "NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL";
             }
+            else if (!string.IsNullOrWhiteSpace(destinatario.Nome))
+            {
+                destino.xNome = destinatario.Nome.Trim();
+            }
+
+            nfce.infNFe.dest = destino;
+        }
+
+        private static bool CnpjValido(string cnpj)
+        {
+            if (cnpj.Length != 14 || cnpj.Distinct().Count() == 1)
+                return false;
+
+            var pesosPrimeiro = new[] { 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2 };
+            var pesosSegundo = new[] { 6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2 };
+
+            static int Digito(string valor, int[] pesos)
+            {
+                var soma = 0;
+                for (var i = 0; i < pesos.Length; i++)
+                    soma += (valor[i] - '0') * pesos[i];
+                var resto = soma % 11;
+                return resto < 2 ? 0 : 11 - resto;
+            }
+
+            return cnpj[12] - '0' == Digito(cnpj, pesosPrimeiro) &&
+                   cnpj[13] - '0' == Digito(cnpj, pesosSegundo);
         }
 
         // ============================================================

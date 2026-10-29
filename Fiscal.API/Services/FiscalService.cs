@@ -237,6 +237,42 @@ namespace Fiscal.API.Services
                 throw new Exception(
                     "Empresa não possui configuração fiscal.");
 
+            // Resolve o cliente cadastrado antes de reservar a numeração fiscal.
+            // Os dados enviados pelo frontend não substituem os dados oficiais do cadastro.
+            DestinatarioRequest? destinatarioEmissao = request.Destinatario;
+
+            if (request.ClienteId.HasValue)
+            {
+                if (request.ClienteId.Value == Guid.Empty)
+                    throw new InvalidOperationException("ClienteId inválido.");
+
+                var cliente = await _context.Clientes
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c =>
+                        c.Id == request.ClienteId.Value &&
+                        c.EmpresaId == empresa.Id &&
+                        c.Ativo);
+
+                if (cliente == null)
+                    throw new InvalidOperationException(
+                        "Cliente não encontrado, inativo ou pertencente a outra empresa.");
+
+                destinatarioEmissao = new DestinatarioRequest
+                {
+                    Nome = cliente.NomeRazaoSocial,
+                    CpfCnpj = cliente.CpfCnpj,
+                    InscricaoEstadual = cliente.InscricaoEstadual,
+                    Logradouro = cliente.Logradouro ?? string.Empty,
+                    Numero = cliente.Numero ?? string.Empty,
+                    Bairro = cliente.Bairro ?? string.Empty,
+                    CodigoMunicipio = cliente.CodigoMunicipioIbge ?? string.Empty,
+                    Municipio = cliente.Cidade ?? string.Empty,
+                    Uf = cliente.Uf ?? string.Empty,
+                    Cep = cliente.Cep ?? string.Empty,
+                    Email = cliente.Email
+                };
+            }
+
             var configuracaoFiscal = empresa.ConfiguracaoFiscal;
 
             // A numeração é reservada atomicamente na transação de persistência.
@@ -360,7 +396,7 @@ namespace Fiscal.API.Services
 
                     nfce = _nfceBuilder.Criar(
                         itensFiscais, empresa, configuracaoFiscal,
-                        request.Destinatario, formaPagamento, numeroReservado);
+                        destinatarioEmissao, formaPagamento, numeroReservado);
 
                     var diferenca = DateTimeOffset.UtcNow -
                         nfce.infNFe.ide.dhEmi.ToUniversalTime();

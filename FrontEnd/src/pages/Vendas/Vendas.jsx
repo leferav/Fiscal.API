@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { obterProdutos, obterImagemProduto } from "../../services/produtoService";
 import FinalizarVendaModal from "./FinalizarVendaModal";
 import { autorizarNFCe, salvarVendaPendente } from "../../services/fiscalApi";
+import { obterClientes } from "../../services/clienteService";
 import { obterEmpresaId } from "../../services/authService";
 import "./Vendas.css";
 
@@ -15,7 +16,28 @@ export default function Vendas() {
     const [modalFinalizarAberto, setModalFinalizarAberto] = useState(false);
     const [emitindo, setEmitindo] = useState(false);
     const [erroEmissao, setErroEmissao] = useState("");
+    const [clientes, setClientes] = useState([]);
+    const [pesquisaCliente, setPesquisaCliente] = useState("");
+    const [clienteSelecionado, setClienteSelecionado] = useState(null);
+    const [erroClientes, setErroClientes] = useState("");
     const empresaId = obterEmpresaId();
+
+    useEffect(() => {
+        let ativo = true;
+        obterClientes().then((dados) => {
+            if (ativo) setClientes(Array.isArray(dados) ? dados : (dados?.clientes ?? dados?.itens ?? []));
+        }).catch((error) => {
+            if (ativo) setErroClientes(error.message || "Não foi possível carregar os clientes.");
+        });
+        return () => { ativo = false; };
+    }, []);
+
+    const clientesFiltrados = useMemo(() => {
+        const termo = pesquisaCliente.trim().toLowerCase();
+        if (!termo) return [];
+        return clientes.filter((c) => c.ativo !== false &&
+            [c.nomeRazaoSocial, c.cpfCnpj].some((v) => String(v ?? "").toLowerCase().includes(termo))).slice(0, 8);
+    }, [clientes, pesquisaCliente]);
 
 
     useEffect(() => {
@@ -205,7 +227,8 @@ export default function Vendas() {
 
         const request = {
             formaPagamento: dados.formaPagamento,
-            cpfConsumidor: dados.cpf || null,
+            clienteId: clienteSelecionado?.id ?? null,
+            cpfConsumidor: clienteSelecionado ? null : (dados.cpf || null),
             produtos: itens.map((item) => ({
                 produtoId: item.id,
                 quantidade: item.quantidade,
@@ -222,6 +245,8 @@ export default function Vendas() {
             }
 
             setItens([]);
+            setClienteSelecionado(null);
+            setPesquisaCliente("");
             setPesquisa("");
             setModalFinalizarAberto(false);
             alert("Venda salva com sucesso para emissão posterior.");
@@ -245,9 +270,10 @@ export default function Vendas() {
 
     const request = {
         empresaId,
+        clienteId: clienteSelecionado?.id ?? null,
 
         destinatario: {
-        cpfCnpj: dados.cpf || null,
+        cpfCnpj: clienteSelecionado ? null : (dados.cpf || null),
         },
 
         produtos: itens.map((item) => ({
@@ -275,6 +301,8 @@ export default function Vendas() {
 
         // Somente limpa a venda se realmente foi autorizada.
         setItens([]);
+        setClienteSelecionado(null);
+        setPesquisaCliente("");
         setPesquisa("");
         setModalFinalizarAberto(false);
 
@@ -506,6 +534,8 @@ export default function Vendas() {
                 disabled={itens.length === 0}
                 onClick={() => {
                 setItens([]);
+                setClienteSelecionado(null);
+                setPesquisaCliente("");
                 setPesquisa("");
                 setErroEmissao("");
                 }}
@@ -535,6 +565,12 @@ export default function Vendas() {
         valorTotal={valorTotal}
         emitindo={emitindo}
         erroEmissao={erroEmissao}
+        clienteSelecionado={clienteSelecionado}
+        pesquisaCliente={pesquisaCliente}
+        setPesquisaCliente={setPesquisaCliente}
+        setClienteSelecionado={setClienteSelecionado}
+        clientesFiltrados={clientesFiltrados}
+        erroClientes={erroClientes}
         onFechar={() => {
             if (!emitindo) {
             setErroEmissao("");
@@ -544,6 +580,8 @@ export default function Vendas() {
         onCancelarVenda={() => {
             if (!emitindo) {
             setItens([]);
+            setClienteSelecionado(null);
+            setPesquisaCliente("");
             setPesquisa("");
             setErroEmissao("");
             setModalFinalizarAberto(false);

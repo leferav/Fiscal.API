@@ -73,6 +73,16 @@ export default function Sidebar() {
             <span>Produtos</span>
           </NavLink>
 
+          <NavLink
+            to="/cadastros/clientes"
+            className={({ isActive }) =>
+              `sidebar-link${isActive ? " active" : ""}`
+            }
+          >
+            <i className="bi bi-person-lines-fill" />
+            <span>Clientes</span>
+          </NavLink>
+
           {!somenteConsulta && (
           <NavLink
             to="/cadastros/empresa"

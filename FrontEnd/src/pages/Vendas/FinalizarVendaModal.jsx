@@ -6,6 +6,12 @@ export default function FinalizarVendaModal({
   valorTotal,
   emitindo,
   erroEmissao,
+  clienteSelecionado,
+  pesquisaCliente,
+  setPesquisaCliente,
+  setClienteSelecionado,
+  clientesFiltrados,
+  erroClientes,
   onFechar,
   onCancelarVenda,
   onConfirmar,
@@ -117,7 +123,7 @@ export default function FinalizarVendaModal({
       return;
     }
 
-    const cpfNumeros = cpf.replace(/\D/g, "");
+    const cpfNumeros = clienteSelecionado ? "" : cpf.replace(/\D/g, "");
 
     if (cpfNumeros && !cpfValido(cpfNumeros)) {
       setErroCpf(
@@ -138,7 +144,7 @@ export default function FinalizarVendaModal({
   function handleEnviarDepois() {
     if (emitindo) return;
 
-    const cpfNumeros = cpf.replace(/\D/g, "");
+    const cpfNumeros = clienteSelecionado ? "" : cpf.replace(/\D/g, "");
     if (cpfNumeros && !cpfValido(cpfNumeros)) {
       setErroCpf("O CPF informado é inválido. Verifique os números digitados.");
       return;
@@ -244,40 +250,39 @@ export default function FinalizarVendaModal({
 
           </div>
 
-          {/* ====================================================
-              CPF
-              ==================================================== */}
-
+          {/* Cliente cadastrado ou CPF manual */}
           <div className="finalizar-campo">
-
-            <label htmlFor="cpfVenda">
-              CPF na nota
-            </label>
-
-            <input
-              id="cpfVenda"
-              type="text"
-              value={cpf}
-              disabled={emitindo}
-              onChange={(e) =>
-                alterarCpf(e.target.value)
-              }
-              placeholder="000.000.000-00"
-              maxLength={14}
-            />
-
-            {erroCpf && (
-              <span className="finalizar-erro">
-                {erroCpf}
-              </span>
+            <label>Cliente cadastrado (opcional)</label>
+            {clienteSelecionado ? (
+              <div className="vendas-cliente-selecionado">
+                <div>
+                  <strong>{clienteSelecionado.nomeRazaoSocial}</strong>
+                  <span>{clienteSelecionado.cpfCnpj} · {clienteSelecionado.cidade || "Cidade não informada"}{clienteSelecionado.uf ? `/${clienteSelecionado.uf}` : ""}</span>
+                  <small>Dados do cadastro utilizados na NFC-e.</small>
+                </div>
+                <button type="button" disabled={emitindo} onClick={() => { setClienteSelecionado(null); setPesquisaCliente(""); }}>Trocar / remover</button>
+              </div>
+            ) : (
+              <>
+                <div className="vendas-cliente-busca">
+                  <input type="search" value={pesquisaCliente} disabled={emitindo} onChange={(e) => setPesquisaCliente(e.target.value)} placeholder="Pesquisar por nome, CPF ou CNPJ..." aria-label="Pesquisar cliente cadastrado" />
+                  {pesquisaCliente.trim() && (
+                    <div className="vendas-cliente-resultados">
+                      {clientesFiltrados.map((cliente) => (
+                        <button key={cliente.id} type="button" disabled={emitindo} onClick={() => { setClienteSelecionado(cliente); setPesquisaCliente(""); setCpf(""); setErroCpf(""); }}>
+                          <strong>{cliente.nomeRazaoSocial}</strong><span>{cliente.cpfCnpj}</span>
+                        </button>
+                      ))}
+                      {clientesFiltrados.length === 0 && <span>Nenhum cliente encontrado.</span>}
+                    </div>
+                  )}
+                  {erroClientes && <small className="vendas-cliente-erro">{erroClientes}</small>}
+                </div>
+                <label htmlFor="cpfVenda">Ou informar CPF na nota</label>
+                <input id="cpfVenda" type="text" value={cpf} disabled={emitindo} onChange={(e) => alterarCpf(e.target.value)} placeholder="000.000.000-00" maxLength={14} />
+                {erroCpf ? <span className="finalizar-erro">{erroCpf}</span> : <small>Opcional. Sem cliente cadastrado, o CPF pode ser informado manualmente.</small>}
+              </>
             )}
-
-            {!erroCpf && (
-              <small>
-                Opcional
-              </small>
-            )}
-
           </div>
 
         </div>

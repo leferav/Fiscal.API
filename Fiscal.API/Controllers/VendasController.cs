@@ -97,6 +97,26 @@ public class VendasController : ControllerBase
             });
         }
 
+        // Cliente cadastrado deve pertencer à empresa autenticada e estar ativo.
+        if (request.ClienteId.HasValue)
+        {
+            if (request.ClienteId.Value == Guid.Empty)
+                return BadRequest(new { mensagem = "ClienteId inválido." });
+
+            var cliente = await _context.Clientes.AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == request.ClienteId.Value &&
+                                          c.EmpresaId == empresaId && c.Ativo);
+
+            if (cliente == null)
+                return BadRequest(new { mensagem = "Cliente não encontrado, inativo ou de outra empresa." });
+
+            // Evita gravar CPF manual conflitante com o cliente selecionado.
+            cpf = cliente.CpfCnpj != null &&
+                  new string(cliente.CpfCnpj.Where(char.IsDigit).ToArray()).Length == 11
+                ? new string(cliente.CpfCnpj.Where(char.IsDigit).ToArray())
+                : null;
+        }
+
         var ids = request.Produtos
             .Select(x => x.ProdutoId)
             .Distinct()
@@ -124,6 +144,7 @@ public class VendasController : ControllerBase
             Status = "A_ENVIAR",
             FormaPagamento = request.FormaPagamento,
             CpfConsumidor = cpf,
+            ClienteId = request.ClienteId,
             CriadoEm = DateTime.UtcNow
         };
 
@@ -167,6 +188,7 @@ public class VendasController : ControllerBase
             venda.Status,
             venda.FormaPagamento,
             venda.CpfConsumidor,
+            venda.ClienteId,
             venda.ValorTotal,
             venda.CriadoEm,
             quantidadeItens = venda.Itens.Count
@@ -200,6 +222,7 @@ public class VendasController : ControllerBase
                 v.Status,
                 v.FormaPagamento,
                 v.CpfConsumidor,
+                v.ClienteId,
                 v.ValorTotal,
                 v.CriadoEm,
                 quantidadeItens = v.Itens.Count,
@@ -354,10 +377,11 @@ public class VendasController : ControllerBase
 
             var request = new EmitirNFeRequest
             {
-                EmpresaId = empresaId
+                EmpresaId = empresaId,
+                ClienteId = venda.ClienteId
             };
 
-            if (!string.IsNullOrWhiteSpace(venda.CpfConsumidor))
+            if (!venda.ClienteId.HasValue && !string.IsNullOrWhiteSpace(venda.CpfConsumidor))
             {
                 request.Destinatario = new DestinatarioRequest
                 {
@@ -432,6 +456,7 @@ public class CriarVendaRequest
 {
     public string FormaPagamento { get; set; } = "01";
     public string? CpfConsumidor { get; set; }
+    public Guid? ClienteId { get; set; }
 
     public List<CriarVendaItemRequest> Produtos { get; set; } = new();
 }

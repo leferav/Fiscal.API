@@ -17,5 +17,7 @@ public class Venda
 
     public Empresa Empresa { get; set; } = null!;
     public NotaFiscal? NotaFiscal { get; set; }
+
+    public Guid? ClienteId { get; set; }
     public ICollection<VendaItem> Itens { get; set; } = new List<VendaItem>();
 }

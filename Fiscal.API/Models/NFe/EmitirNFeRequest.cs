@@ -7,5 +7,8 @@
         public List<ProdutoRequest> Produtos { get; set; } = new();
 
         public Guid EmpresaId { get; set; }
+
+        public Guid? ClienteId { get; set; }
+
     }
 }

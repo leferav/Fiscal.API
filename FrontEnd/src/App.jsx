@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes,} from "react-router-dom";
 import Login from "./pages/Login/Login";
 import Produtos from "./pages/Produtos/Produtos";
+import Clientes from "./pages/Clientes/Clientes";
+import ClienteFormulario from "./pages/Clientes/ClienteFormulario";
 import ProdutoDetalhes from "./pages/Produtos/ProdutoDetalhes";
 import NovoProduto from "./pages/Produtos/NovoProduto";
 import EmitirNFCe from "./pages/EmitirNFCe/EmitirNFCe";
@@ -109,6 +111,11 @@ function App() {
             <Route path="/fiscal/notas" element={<NotasFiscais />} />
 
             <Route path="/fiscal/notas/:id" element={<NotaFiscalDetalhes />} />
+
+            {/* CLIENTES */}
+            <Route path="/cadastros/clientes" element={<Clientes />} />
+            <Route path="/cadastros/clientes/novo" element={acessoOperacional ? <ClienteFormulario /> : <Navigate to="/dashboard" replace />} />
+            <Route path="/cadastros/clientes/:id" element={<ClienteFormulario />} />
 
             <Route path="/cadastros/produtos" element={<Produtos />} />
 

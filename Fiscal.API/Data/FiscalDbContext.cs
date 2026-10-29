@@ -13,6 +13,7 @@ public class FiscalDbContext : DbContext
     public DbSet<CertificadoDigitalArquivo> CertificadosDigitaisArquivos => Set<CertificadoDigitalArquivo>();
     public DbSet<ConfiguracaoFiscal> ConfiguracoesFiscais => Set<ConfiguracaoFiscal>();
     public DbSet<NotaFiscal> NotasFiscais => Set<NotaFiscal>();
+    public DbSet<Cliente> Clientes => Set<Cliente>();
     public DbSet<Venda> Vendas => Set<Venda>();
     public DbSet<VendaItem> VendasItens => Set<VendaItem>();
     public DbSet<ConfiguracaoTributaria> ConfiguracoesTributarias => Set<ConfiguracaoTributaria>();
@@ -32,6 +33,7 @@ public class FiscalDbContext : DbContext
         ConfigurarCertificadoDigitalArquivo(modelBuilder);
         ConfigurarConfiguracaoFiscal(modelBuilder);
         ConfigurarNotaFiscal(modelBuilder);
+        ConfigurarCliente(modelBuilder);
         ConfigurarVenda(modelBuilder);
         ConfigurarVendaItem(modelBuilder);
         ConfigurarConfiguracaoTributaria(modelBuilder);
@@ -233,6 +235,33 @@ public class FiscalDbContext : DbContext
         entity.HasOne(x => x.Empresa)
             .WithMany(x => x.NotasFiscais)
             .HasForeignKey(x => x.EmpresaId);
+    }
+
+    private static void ConfigurarCliente(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<Cliente>();
+        entity.ToTable("clientes");
+        entity.HasKey(x => x.Id);
+        entity.Property(x => x.TipoPessoa).HasMaxLength(2).IsRequired();
+        entity.Property(x => x.NomeRazaoSocial).HasMaxLength(150).IsRequired();
+        entity.Property(x => x.CpfCnpj).HasMaxLength(14).IsRequired();
+        entity.Property(x => x.InscricaoEstadual).HasMaxLength(20);
+        entity.Property(x => x.Email).HasMaxLength(200);
+        entity.Property(x => x.Telefone).HasMaxLength(20);
+        entity.Property(x => x.Cep).HasMaxLength(8);
+        entity.Property(x => x.Logradouro).HasMaxLength(150);
+        entity.Property(x => x.Numero).HasMaxLength(20);
+        entity.Property(x => x.Complemento).HasMaxLength(100);
+        entity.Property(x => x.Bairro).HasMaxLength(100);
+        entity.Property(x => x.Cidade).HasMaxLength(100);
+        entity.Property(x => x.CodigoMunicipioIbge).HasMaxLength(7);
+        entity.Property(x => x.Uf).HasMaxLength(2);
+        entity.Property(x => x.CriadoEm).HasColumnType("timestamp with time zone");
+        entity.Property(x => x.AtualizadoEm).HasColumnType("timestamp with time zone");
+        entity.HasIndex(x => new { x.EmpresaId, x.CpfCnpj }).IsUnique();
+        entity.HasIndex(x => new { x.EmpresaId, x.NomeRazaoSocial });
+        entity.HasOne<Empresa>().WithMany().HasForeignKey(x => x.EmpresaId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigurarVenda(ModelBuilder modelBuilder)

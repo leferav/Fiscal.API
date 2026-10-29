@@ -177,6 +177,93 @@ namespace Fiscal.API.Migrations
                     b.ToTable("certificados_digitais_arquivos", (string)null);
                 });
 
+            modelBuilder.Entity("Fiscal.API.Models.Database.Cliente", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("AtualizadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Bairro")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Cep")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<string>("Cidade")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CodigoMunicipioIbge")
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<string>("Complemento")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CpfCnpj")
+                        .IsRequired()
+                        .HasMaxLength(14)
+                        .HasColumnType("character varying(14)");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("InscricaoEstadual")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Logradouro")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("NomeRazaoSocial")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("Numero")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Telefone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("TipoPessoa")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("Uf")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmpresaId", "CpfCnpj")
+                        .IsUnique();
+
+                    b.HasIndex("EmpresaId", "NomeRazaoSocial");
+
+                    b.ToTable("clientes", (string)null);
+                });
+
             modelBuilder.Entity("Fiscal.API.Models.Database.ConfiguracaoFiscal", b =>
                 {
                     b.Property<Guid>("Id")
@@ -572,6 +659,9 @@ namespace Fiscal.API.Migrations
                     b.Property<DateTime?>("AtualizadoEm")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("ClienteId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("CpfConsumidor")
                         .HasMaxLength(11)
                         .HasColumnType("character varying(11)");
@@ -762,6 +852,15 @@ namespace Fiscal.API.Migrations
                         .IsRequired();
 
                     b.Navigation("CertificadoDigital");
+                });
+
+            modelBuilder.Entity("Fiscal.API.Models.Database.Cliente", b =>
+                {
+                    b.HasOne("Fiscal.API.Models.Database.Empresa", null)
+                        .WithMany()
+                        .HasForeignKey("EmpresaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Fiscal.API.Models.Database.ConfiguracaoFiscal", b =>
