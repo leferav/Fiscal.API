@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { cadastrarProduto, alterarProduto, obterConfiguracoesTributarias, obterProdutoPorId, pesquisarNcms, obterImagemProduto, enviarImagemProduto, } from "../../services/produtoService";
 import "./Produtos.css";
@@ -10,6 +10,7 @@ export default function NovoProduto() {
   const [configuracoes, setConfiguracoes] = useState([]);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
+  const erroRef = useRef(null);
   const [buscaNcm, setBuscaNcm] = useState("");
   const [resultadosNcm, setResultadosNcm] = useState([]);
   const [pesquisandoNcm, setPesquisandoNcm] = useState(false);
@@ -65,6 +66,9 @@ export default function NovoProduto() {
           configuracaoTributariaId:
           produto.configuracaoTributariaId || "",
       });
+
+      setBuscaNcm(produto.ncm || "");
+
       } catch (error) {
       console.error(
           "Erro ao carregar produto para edição:",
@@ -115,17 +119,17 @@ export default function NovoProduto() {
     };
   }, [id, editando]);
 
-useEffect(() => {
-  if (!arquivoImagem) {
-    setImagemPreview(null);
-    return;
-  }
+  useEffect(() => {
+    if (!arquivoImagem) {
+      setImagemPreview(null);
+      return;
+    }
 
-  const url = URL.createObjectURL(arquivoImagem);
-  setImagemPreview(url);
+    const url = URL.createObjectURL(arquivoImagem);
+    setImagemPreview(url);
 
-  return () => URL.revokeObjectURL(url);
-}, [arquivoImagem]);
+    return () => URL.revokeObjectURL(url);
+  }, [arquivoImagem]);
 
 function selecionarImagem(event) {
   const arquivo = event.target.files?.[0];
@@ -150,21 +154,8 @@ function selecionarImagem(event) {
 
 
   function alterarCampo(event) {
-  const { name, value } = event.target;
-
-  setForm((anterior) => ({
-      ...anterior,
-      [name]: value,
-  }));
-  }
-
-  function alterarCampo(event) {
     const { name, value } = event.target;
-
-    setForm((anterior) => ({
-      ...anterior,
-      [name]: value,
-    }));
+    setForm((anterior) => ({ ...anterior, [name]: value }));
   }
 
   async function alterarBuscaNcm(event) {
@@ -198,6 +189,13 @@ function selecionarImagem(event) {
   }
   }
 
+  function limparDescricaoNcm(descricao) {
+    return String(descricao || "")
+        .replace(/<[^>]*>/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
   function selecionarNcm(ncm) {
     setForm((anterior) => ({
       ...anterior,
@@ -205,11 +203,22 @@ function selecionarImagem(event) {
     }));
 
     setBuscaNcm(
-      `${ncm.codigo} - ${ncm.descricao}`
+      `${ncm.codigo} - ${limparDescricaoNcm(ncm.descricao)}`
     );
 
     setResultadosNcm([]);
   }
+
+  // Rola até o aviso após ele aparecer no DOM, inclusive em áreas com scroll próprio.
+  useLayoutEffect(() => {
+    if (!erro || !erroRef.current) return;
+    const elemento = erroRef.current;
+    const frame = requestAnimationFrame(() => {
+      elemento.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
+      elemento.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [erro]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -313,12 +322,6 @@ function selecionarImagem(event) {
         </div>
       </section>
 
-      {erro && (
-        <div className="alert alert-danger">
-          {erro}
-        </div>
-      )}
-
       <form onSubmit={handleSubmit}>
         <section className="card detalhe-card">
           <div className="detalhe-card-titulo">
@@ -379,7 +382,7 @@ function selecionarImagem(event) {
                       onClick={() => selecionarNcm(ncm)}
                     >
                       <strong>{ncm.codigo}</strong>
-                      <span>{ncm.descricao}</span>
+                      <span>{limparDescricaoNcm(ncm.descricao)}</span>
                     </button>
                   ))}
                 </div>
@@ -504,6 +507,25 @@ function selecionarImagem(event) {
             </select>
           </div>
         </section>
+
+        {erro && (
+            <div
+                role="alert"
+                style={{
+                    backgroundColor: "#fff1f2",
+                    border: "1px solid #ff4d5a",
+                    color: "#b42332",
+                    padding: "14px",
+                    borderRadius: "8px",
+                    marginTop: "16px",
+                    marginBottom: "12px",
+                    fontSize: "13px"
+                }}
+            >
+                <strong>⚠ Não foi possível salvar o produto.</strong>
+                <div style={{ marginTop: "6px" }}>{erro}</div>
+            </div>
+        )}
 
         <div className="produto-form-acoes">
           <button

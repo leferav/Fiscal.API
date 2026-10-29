@@ -1,4 +1,5 @@
-﻿using Fiscal.API.Models.Database;
+﻿using Fiscal.API.Exceptions;
+using Fiscal.API.Models.Database;
 using Fiscal.API.Models.NFe;
 using NFe.Classes.Informacoes.Detalhe;
 using NFe.Classes.Informacoes.Detalhe.Tributacao;
@@ -40,6 +41,7 @@ namespace Fiscal.API.Services.NFe
             var ambienteHomologacao =
                 configuracaoFiscal.Ambiente == 2;
 
+
             foreach (var item in itensFiscais)
             {
                 var configuracaoTributaria =
@@ -68,12 +70,45 @@ namespace Fiscal.API.Services.NFe
                 // Valida CFOP
                 // ====================================================
 
-                if (string.IsNullOrWhiteSpace(
-                    configuracaoTributaria.Cfop))
+                if (string.IsNullOrWhiteSpace(configuracaoTributaria.Cfop))
                 {
-                    throw new Exception(
-                        $"CFOP não informado para o produto {item.Codigo}."
-                    );
+                    throw new ValidacaoFiscalException(
+                        $"Produto {item.Codigo} - {item.Descricao}: CFOP não informado.");
+                }
+
+                var cfopTexto = configuracaoTributaria.Cfop.Trim();
+
+                if (cfopTexto.Length != 4 ||
+                    !cfopTexto.All(char.IsDigit) ||
+                    !int.TryParse(cfopTexto, out var cfop) ||
+                    cfop == 0)
+                {
+                    throw new ValidacaoFiscalException(
+                        $"Produto {item.Codigo} - {item.Descricao}: " +
+                        $"CFOP '{cfopTexto}' inválido. Verifique a configuração tributária.");
+                }
+
+                // ====================================================
+                // Valida NCM
+                // ====================================================
+
+                if (string.IsNullOrWhiteSpace(item.Ncm))
+                {
+                    throw new ValidacaoFiscalException(
+                        $"Produto {item.Codigo} - {item.Descricao}: " +
+                        "NCM não informado.");
+                }
+
+                var ncmTexto = item.Ncm.Trim();
+
+                if (ncmTexto.Length != 8 ||
+                    !ncmTexto.All(char.IsDigit) ||
+                    ncmTexto == "00000000")
+                {
+                    throw new ValidacaoFiscalException(
+                        $"Produto {item.Codigo} - {item.Descricao}: " +
+                        $"NCM '{ncmTexto}' inválido. " +
+                        "Informe um NCM válido com 8 dígitos numéricos.");
                 }
 
                 // ====================================================
@@ -93,11 +128,9 @@ namespace Fiscal.API.Services.NFe
 
                         xProd = descricao,
 
-                        NCM = item.Ncm,
+                        NCM = ncmTexto,
 
-                        CFOP = int.Parse(
-                            configuracaoTributaria.Cfop
-                        ),
+                        CFOP = cfop,
 
                         uCom = item.Unidade,
                         qCom = item.Quantidade,
@@ -175,10 +208,7 @@ namespace Fiscal.API.Services.NFe
         // ============================================================
         // ICMS
         // ============================================================
-        private ICMS CriarIcms(
-            int crt,
-            decimal valorProduto,
-            ConfiguracaoTributaria configuracaoTributaria)
+        private ICMS CriarIcms( int crt, decimal valorProduto, ConfiguracaoTributaria configuracaoTributaria)
         {
             // ========================================================
             // Simples Nacional / MEI
@@ -211,8 +241,7 @@ namespace Fiscal.API.Services.NFe
         // ============================================================
         // Simples Nacional / MEI
         // ============================================================
-        private ICMS CriarIcmsSimplesNacional(
-            ConfiguracaoTributaria configuracaoTributaria)
+        private ICMS CriarIcmsSimplesNacional( ConfiguracaoTributaria configuracaoTributaria)
         {
             var csosn = configuracaoTributaria.Csosn ?? "102";
 
@@ -232,9 +261,7 @@ namespace Fiscal.API.Services.NFe
                 $"CSOSN {csosn} ainda não implementado.");
         }
 
-        private ICMS CriarIcmsRegimeNormal(
-            decimal valorProduto,
-            ConfiguracaoTributaria configuracaoTributaria)
+        private ICMS CriarIcmsRegimeNormal( decimal valorProduto, ConfiguracaoTributaria configuracaoTributaria)
         {
             var cst = configuracaoTributaria.CstIcms;
             var aliquota = configuracaoTributaria.AliquotaIcms;

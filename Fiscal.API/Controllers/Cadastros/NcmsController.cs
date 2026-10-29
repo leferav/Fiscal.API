@@ -1,8 +1,11 @@
-﻿using Fiscal.API.Data;
+using Fiscal.API.Data;
 using Fiscal.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Globalization;
+using System.Text;
 
 namespace Fiscal.API.Controllers.Cadastros
 {
@@ -35,50 +38,72 @@ namespace Fiscal.API.Controllers.Cadastros
         [HttpPost("sincronizar")]
         public async Task<IActionResult> Sincronizar()
         {
-            var resultado =
-                await _ncmService.SincronizarNcmsAsync();
-
+            var resultado = await _ncmService.SincronizarNcmsAsync();
             return Ok(resultado);
         }
 
         [HttpGet]
-        public async Task<IActionResult> Pesquisar( [FromQuery] string? busca)
+        public async Task<IActionResult> Pesquisar([FromQuery] string? busca)
         {
             if (string.IsNullOrWhiteSpace(busca))
-            {
                 return Ok(Array.Empty<object>());
-            }
 
             var texto = busca.Trim();
+            var textoSemAcentos = RemoverAcentos(texto);
+            var codigo = texto.Replace(".", "").Replace("-", "");
 
-            var codigo =
-                texto.Replace(".", "")
-                     .Replace("-", "");
+            // Escapa curingas do LIKE para que %, _ e \\ sejam tratados como texto.
+            var termo = textoSemAcentos.Replace("\\", "\\\\")
+                                       .Replace("%", "\\%")
+                                       .Replace("_", "\\_");
+            var codigoEscapado = codigo.Replace("\\", "\\\\")
+                                      .Replace("%", "\\%")
+                                      .Replace("_", "\\_");
+            var buscaDescricao = $"%{termo}%";
+            var inicioDescricao = $"{termo}%";
+            var inicioCodigo = $"{codigoEscapado}%";
 
-            var ncms = await _context.Ncms
+            // FromSqlInterpolated transforma os valores interpolados em parâmetros SQL.
+            // A função unaccent é executada pelo PostgreSQL, não pelo C#.
+            var registros = await _context.Ncms
+                .FromSqlInterpolated($@"
+                    SELECT *
+                    FROM ncms
+                    WHERE ""Ativo"" = TRUE
+                      AND (
+                          ""Codigo"" LIKE {inicioCodigo}
+                          OR unaccent(""Descricao"") ILIKE {buscaDescricao}
+                      )
+                    ORDER BY
+                      CASE WHEN unaccent(""Descricao"") ILIKE {inicioDescricao}
+                           THEN 0 ELSE 1 END,
+                      ""Codigo""
+                    LIMIT 20")
                 .AsNoTracking()
-                .Where(x =>
-                    x.Ativo &&
-                    (
-                        x.Codigo.StartsWith(codigo) ||
-                        EF.Functions.ILike(
-                            x.Descricao,
-                            $"%{texto}%")
-                    ))
-                .OrderByDescending(x =>
-                    EF.Functions.ILike(
-                        x.Descricao,
-                        $"{texto}%"))
-                .ThenBy(x => x.Codigo)
-                .Take(20)
-                .Select(x => new
-                {
-                    x.Codigo,
-                    x.Descricao
-                })
                 .ToListAsync();
 
-            return Ok(ncms);
+            return Ok(registros.Select(x => new
+            {
+                x.Codigo,
+                x.Descricao
+            }));
+        }
+
+        private static string RemoverAcentos(string texto)
+        {
+            var normalizado = texto.Normalize(NormalizationForm.FormD);
+            var resultado = new StringBuilder();
+
+            foreach (var caractere in normalizado)
+            {
+                if (CharUnicodeInfo.GetUnicodeCategory(caractere)
+                    != UnicodeCategory.NonSpacingMark)
+                {
+                    resultado.Append(caractere);
+                }
+            }
+
+            return resultado.ToString().Normalize(NormalizationForm.FormC);
         }
     }
 }

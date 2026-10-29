@@ -2,6 +2,7 @@
 using System.Net;
 using Fiscal.API.Constants;
 using Fiscal.API.DTOs.Common;
+using Fiscal.API.Exceptions;
 
 namespace Fiscal.API.Middleware;
 
@@ -24,6 +25,31 @@ public class ExceptionMiddleware
         {
             await _next(context);
         }
+        catch (ValidacaoFiscalException ex)
+        {
+            if (context.Response.HasStarted)
+                throw;
+
+            _logger.LogWarning(
+                ex,
+                "Validação fiscal na requisição {Path}. TraceId: {TraceId}",
+                context.Request.Path,
+                context.TraceIdentifier
+            );
+
+            context.Response.Clear();
+            context.Response.StatusCode =
+                (int)HttpStatusCode.UnprocessableEntity;
+
+            context.Response.ContentType = "application/json";
+
+            await context.Response.WriteAsJsonAsync(new ErroResponse
+            {
+                Codigo = "VALIDACAO_FISCAL",
+                Mensagem = ex.Message,
+                TraceId = context.TraceIdentifier
+            });
+        }
         catch (Exception ex)
         {
             _logger.LogError(
@@ -40,17 +66,14 @@ public class ExceptionMiddleware
             context.Response.StatusCode =
                 (int)HttpStatusCode.InternalServerError;
 
-            context.Response.ContentType =
-                "application/json";
+            context.Response.ContentType = "application/json";
 
-            var resposta = new ErroResponse
+            await context.Response.WriteAsJsonAsync(new ErroResponse
             {
                 Codigo = "ERRO_INTERNO",
                 Mensagem = MensagensErro.ErroInterno,
                 TraceId = context.TraceIdentifier
-            };
-
-            await context.Response.WriteAsJsonAsync(resposta);
+            });
         }
     }
 }
