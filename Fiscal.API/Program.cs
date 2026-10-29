@@ -1,3 +1,4 @@
+using Serilog;
 using Fiscal.API.Data;
 using Fiscal.API.Middleware;
 using Fiscal.API.Services;
@@ -14,7 +15,13 @@ using System.Text;
 QuestPDF.Settings.License = LicenseType.Community;
 var builder = WebApplication.CreateBuilder(args);
 
-// Certificado PFX vindo de vari·vel de ambiente (Koyeb)
+builder.Host.UseSerilog((context, services, logger) => logger
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console());
+
+// Certificado PFX vindo de vari√°vel de ambiente (Koyeb)
 var certificadoBase64 = Environment.GetEnvironmentVariable("CERT_PFX_BASE64");
 if (!string.IsNullOrWhiteSpace(certificadoBase64))
 {
@@ -42,22 +49,22 @@ builder.Services.AddHttpClient<NcmService>();
 builder.Services.AddHttpClient();
 
 // ============================================================
-// JWT / AUTENTICA«√O
+// JWT / AUTENTICA√á√ÉO
 // ============================================================
 
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException(
-        "Jwt:Key n„o configurada."
+        "Jwt:Key n√£o configurada."
     );
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"]
     ?? throw new InvalidOperationException(
-        "Jwt:Issuer n„o configurado."
+        "Jwt:Issuer n√£o configurado."
     );
 
 var jwtAudience = builder.Configuration["Jwt:Audience"]
     ?? throw new InvalidOperationException(
-        "Jwt:Audience n„o configurado."
+        "Jwt:Audience n√£o configurado."
     );
 
 builder.Services
@@ -85,7 +92,7 @@ builder.Services
     });
 
 // ============================================================
-// SERVI«OS DA APLICA«√O
+// SERVI√áOS DA APLICA√á√ÉO
 // ============================================================
 
 builder.Services.AddScoped<FiscalService>();
@@ -147,7 +154,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Tratamento global de exceÁıes
+// Tratamento global de exce√ß√µes
 app.UseMiddleware<ExceptionMiddleware>();
 
 // ============================================================
@@ -170,7 +177,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.UseMiddleware<ExceptionMiddleware>();
+
 
 await UsuarioSeed.CriarAdminInicialAsync(
     app.Services,

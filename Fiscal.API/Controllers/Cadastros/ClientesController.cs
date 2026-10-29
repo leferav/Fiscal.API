@@ -114,6 +114,38 @@ public class ClientesController : ControllerBase
         return Ok(new { cliente.Id, cliente.Ativo });
     }
 
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Master,Administrador")]
+    public async Task<IActionResult> Excluir(Guid id)
+    {
+        if (!TentarEmpresa(out var empresaId))
+            return Unauthorized(new { mensagem = "Empresa não identificada no token." });
+
+        var cliente = await _context.Clientes
+            .FirstOrDefaultAsync(x => x.Id == id && x.EmpresaId == empresaId);
+
+        if (cliente is null)
+            return NotFound(new { mensagem = "Cliente não encontrado." });
+
+        var possuiVendas = await _context.Vendas.AsNoTracking()
+            .AnyAsync(x => x.EmpresaId == empresaId && x.ClienteId == id);
+
+        if (possuiVendas)
+            return Conflict(new { mensagem = "Este cliente possui vendas vinculadas e não pode ser excluído. Utilize a opção de desativar." });
+
+        _context.Clientes.Remove(cliente);
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            return Conflict(new { mensagem = "Este cliente possui registros vinculados e não pode ser excluído. Utilize a opção de desativar." });
+        }
+
+        return NoContent();
+    }
+
     private static void Preencher(Cliente cliente, ClienteSalvarRequest r)
     {
         cliente.TipoPessoa = r.TipoPessoa.Trim().ToUpperInvariant();

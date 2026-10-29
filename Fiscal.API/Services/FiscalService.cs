@@ -19,6 +19,7 @@ namespace Fiscal.API.Services
 {
     public class FiscalService
     {
+        private readonly ILogger<FiscalService> _logger;
         private readonly ZeusConfigurationFactory _configFactory;
         private readonly NFeBuilder _nfeBuilder;
         private readonly NFCeBuilder _nfceBuilder;
@@ -34,8 +35,10 @@ namespace Fiscal.API.Services
             NFCeBuilder nfceBuilder,
             FiscalDbContext context,
             CertificadoDigitalService certificadoDigitalService,
-            NumeracaoFiscalService numeracaoFiscalService)
+            NumeracaoFiscalService numeracaoFiscalService,
+            ILogger<FiscalService> logger)
         {
+            _logger = logger;
             _configFactory = configFactory;
             _nfeBuilder = nfeBuilder;
             _nfeXmlService = nfeXmlService;
@@ -461,8 +464,11 @@ namespace Fiscal.API.Services
                         1, IndicadorSincronizacao.Sincrono,
                         new List<global::NFe.Classes.NFe> { nfce! }, false);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    _logger.LogError(ex,
+                        "Falha ao transmitir NFC-e. EmpresaId={EmpresaId} NotaFiscalId={NotaFiscalId} VendaId={VendaId} Numero={Numero} Serie={Serie} Chave={Chave}. Resultado SEFAZ indeterminado; consultar antes de reenviar.",
+                        empresa.Id, tentativa!.Id, vendaId, tentativa.Numero, tentativa.Serie, tentativa.ChaveAcesso);
                     if (vendaId.HasValue)
                     {
                         await _context.Vendas.Where(v => v.Id == vendaId.Value &&
@@ -486,6 +492,11 @@ namespace Fiscal.API.Services
                     (codigoRetorno == 100 || codigoRetorno == 150) &&
                     protocolo?.infProt != null &&
                     !string.IsNullOrWhiteSpace(protocolo.infProt.nProt);
+
+                _logger.Log(autorizada ? LogLevel.Information : LogLevel.Warning,
+                    "Retorno SEFAZ NFC-e. EmpresaId={EmpresaId} NotaFiscalId={NotaFiscalId} VendaId={VendaId} Numero={Numero} Serie={Serie} Chave={Chave} CStat={CStat} Motivo={Motivo} Protocolo={Protocolo} Autorizada={Autorizada}",
+                    empresa.Id, tentativa!.Id, vendaId, tentativa.Numero, tentativa.Serie, tentativa.ChaveAcesso,
+                    codigoRetorno, protocolo?.infProt?.xMotivo ?? retEnviNFe.xMotivo, protocolo?.infProt?.nProt, autorizada);
 
                 // Rejeições explícitas.
                 // 704: Duplicidade de NFC-e com diferença na chave de acesso.

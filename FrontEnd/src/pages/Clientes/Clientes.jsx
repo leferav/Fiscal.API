@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { obterUsuario } from "../../services/authService";
-import { obterClientes } from "../../services/clienteService";
+import { obterClientes, excluirCliente, alterarStatusCliente } from "../../services/clienteService";
 import "./Clientes.css";
 
 function formatarDocumento(valor) {
@@ -16,8 +16,12 @@ export default function Clientes() {
   const [pesquisa, setPesquisa] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
+  const [sucesso, setSucesso] = useState("");
+  const [excluindoId, setExcluindoId] = useState(null);
   const navigate = useNavigate();
-  const somenteConsulta = obterUsuario()?.perfil === "Consulta";
+  const perfil = obterUsuario()?.perfil;
+  const somenteConsulta = perfil === "Consulta";
+  const podeExcluir = perfil === "Master" || perfil === "Administrador";
 
   useEffect(() => {
     let ativo = true;
@@ -34,6 +38,41 @@ export default function Clientes() {
     carregar();
     return () => { ativo = false; };
   }, []);
+
+  async function confirmarExclusao(cliente) {
+    if (excluindoId) return;
+    if (!window.confirm(`Deseja realmente excluir o cliente "${cliente.nomeRazaoSocial}"?`)) return;
+
+    setErro("");
+    setSucesso("");
+    setExcluindoId(cliente.id);
+    try {
+      await excluirCliente(cliente.id);
+      setClientes(anteriores => anteriores.filter(c => c.id !== cliente.id));
+      setSucesso("Cliente excluído com sucesso.");
+    } catch (e) {
+      const mensagem = e.message || "Não foi possível excluir o cliente.";
+      // Somente oferece desativação quando a API informa um vínculo impeditivo.
+      if (/vinculad|venda|nota fiscal|documento fiscal|histórico fiscal/i.test(mensagem)) {
+        const desativar = window.confirm(`${mensagem}\n\nDeseja desativar este cliente?`);
+        if (desativar) {
+          try {
+            await alterarStatusCliente(cliente.id, false);
+            setClientes(anteriores => anteriores.filter(c => c.id !== cliente.id));
+            setSucesso("Cliente desativado com sucesso. O histórico foi preservado.");
+          } catch (erroStatus) {
+            setErro(erroStatus.message || "Não foi possível desativar o cliente.");
+          }
+        } else {
+          setErro(mensagem);
+        }
+      } else {
+        setErro(mensagem);
+      }
+    } finally {
+      setExcluindoId(null);
+    }
+  }
 
   const filtrados = useMemo(() => {
     const termo = pesquisa.trim().toLowerCase();
@@ -52,9 +91,10 @@ export default function Clientes() {
       <section className="card clientes-card">
         <div className="clientes-filtros"><div className="clientes-pesquisa"><i className="bi bi-search" /><input value={pesquisa} onChange={e => setPesquisa(e.target.value)} placeholder="Pesquisar por nome, CPF/CNPJ, e-mail ou telefone..." /></div></div>
         {erro && <div className="alert alert-danger m-3">{erro}</div>}
+        {sucesso && <div className="alert alert-success m-3">{sucesso}</div>}
         {carregando ? <div className="clientes-vazio">Carregando clientes...</div> :
           <div className="table-responsive"><table className="clientes-tabela"><thead><tr><th>Nome / Razão social</th><th>CPF / CNPJ</th><th>Tipo</th><th>Telefone</th><th>Situação</th><th>Ações</th></tr></thead><tbody>
-            {filtrados.map(c => <tr key={c.id}><td><strong>{c.nomeRazaoSocial}</strong></td><td>{formatarDocumento(c.cpfCnpj)}</td><td>{c.tipoPessoa === "PJ" ? "Jurídica" : "Física"}</td><td>{c.telefone || "-"}</td><td><span className={`cliente-status ${c.ativo ? "ativo" : "inativo"}`}>{c.ativo ? "Ativo" : "Inativo"}</span></td><td><button type="button" className="cliente-btn-acao" title="Visualizar cliente" onClick={() => navigate(`/cadastros/clientes/${c.id}`)}><i className="bi bi-eye" /></button></td></tr>)}
+            {filtrados.map(c => <tr key={c.id}><td><strong>{c.nomeRazaoSocial}</strong></td><td>{formatarDocumento(c.cpfCnpj)}</td><td>{c.tipoPessoa === "PJ" ? "Jurídica" : "Física"}</td><td>{c.telefone || "-"}</td><td><span className={`cliente-status ${c.ativo ? "ativo" : "inativo"}`}>{c.ativo ? "Ativo" : "Inativo"}</span></td><td><button type="button" className="cliente-btn-acao" title="Visualizar cliente" onClick={() => navigate(`/cadastros/clientes/${c.id}`)}><i className="bi bi-eye" /></button>{podeExcluir && <button type="button" className="cliente-btn-acao" title="Excluir cliente" aria-label={`Excluir ${c.nomeRazaoSocial}`} disabled={Boolean(excluindoId)} onClick={() => confirmarExclusao(c)} style={{ marginLeft: 8, color: "#dc3545" }}><i className="bi bi-trash" /></button>}</td></tr>)}
             {!filtrados.length && <tr><td colSpan="6" className="clientes-vazio">Nenhum cliente encontrado.</td></tr>}
           </tbody></table></div>}
       </section>
