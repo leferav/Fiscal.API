@@ -88,8 +88,33 @@ namespace Fiscal.API.Controllers
 
                 return Ok(resultado);
             }
+            catch (NotSupportedException ex) when (
+                ex.Message.StartsWith("CST ICMS ", StringComparison.OrdinalIgnoreCase) &&
+                ex.Message.EndsWith(" ainda não implementado.", StringComparison.OrdinalIgnoreCase))
+            {
+                // Erro fiscal conhecido e seguro para exibir ao operador.
+                return UnprocessableEntity(new
+                {
+                    codigo = "CST_ICMS_NAO_IMPLEMENTADO",
+                    mensagem = ex.Message
+                });
+            }
             catch (Exception ex)
             {
+                // O builder pode lançar Exception genérica para CST ainda não suportado.
+                // Somente esta mensagem conhecida é devolvida ao frontend.
+                if (System.Text.RegularExpressions.Regex.IsMatch(
+                    ex.Message,
+                    @"^CST ICMS [0-9]{2,3} ainda não implementado\.$",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                {
+                    return UnprocessableEntity(new
+                    {
+                        codigo = "CST_ICMS_NAO_IMPLEMENTADO",
+                        mensagem = ex.Message
+                    });
+                }
+
                 System.Diagnostics.Debug.WriteLine(
                     "ERRO EMISSÃO NFC-e: " + ex.ToString());
 

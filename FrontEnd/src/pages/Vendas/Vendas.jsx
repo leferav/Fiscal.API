@@ -291,12 +291,13 @@ export default function Vendas() {
         console.log("Retorno NFC-e:", resultado);
 
         if (Number(resultado?.cStat) !== 100) {
-        setErroEmissao(
-            resultado?.xMotivo ||
-            "A NFC-e não foi autorizada pela SEFAZ."
-        );
-
-        return;
+            const motivo = resultado?.mensagem || resultado?.erro || resultado?.message ||
+                resultado?.xMotivo || resultado?.motivo || resultado?.Motivo;
+            const codigo = resultado?.cStat != null ? ` (cStat ${resultado.cStat})` : "";
+            setErroEmissao(motivo
+                ? `${motivo}${codigo}`
+                : `A NFC-e não foi autorizada pela SEFAZ${codigo}. Consulte o registro fiscal antes de tentar novamente.`);
+            return;
         }
 
         // Somente limpa a venda se realmente foi autorizada.
@@ -312,10 +313,12 @@ export default function Vendas() {
     } catch (error) {
         console.error("Erro na emissão da NFC-e:", error);
 
-        setErroEmissao(
-        error.message ||
-            "Não foi possível emitir a NFC-e."
-        );
+        const mensagem = error?.response?.data?.mensagem || error?.response?.data?.erro ||
+            error?.message || "Não foi possível emitir a NFC-e.";
+        const falhaComunicacao = /não foi possível conectar|falha de comunicação|network|failed to fetch|timeout/i.test(mensagem);
+        setErroEmissao(falhaComunicacao
+            ? `${mensagem} Consulte a situação da NFC-e antes de tentar novamente, para evitar duplicidade.`
+            : mensagem);
     } finally {
         setEmitindo(false);
     }
