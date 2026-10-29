@@ -313,39 +313,118 @@ export default function NotaFiscalDetalhes() {
 
       </div>
 
-      <section
-        className={`card detalhe-sefaz ${
-          nota.status === "AUTORIZADA"
-            ? "sucesso"
-            : "erro"
-        }`}
-      >
+      {/* Retorno da autorização original, preservado mesmo após cancelamento */}
+      <section className="card detalhe-sefaz sucesso">
         <div className="detalhe-sefaz-icone">
-          <i
-            className={
-              nota.status === "AUTORIZADA"
-                ? "bi bi-check-circle"
-                : "bi bi-x-circle"
-            }
-          />
+          <i className="bi bi-check-circle" />
         </div>
-
         <div>
-          <span>RETORNO SEFAZ</span>
-
-          <strong>
-            {nota.cStat ?? "-"} -{" "}
-            {nota.xMotivo || "Sem retorno informado"}
-          </strong>
+          <span>RETORNO SEFAZ — AUTORIZAÇÃO</span>
+          <strong>{nota.cStat ?? "-"} - {nota.xMotivo || "Sem retorno informado"}</strong>
         </div>
       </section>
+
+      {(nota.status === "CANCELADA" ||
+        nota.status === "CANCELAMENTO_INDETERMINADO" ||
+        nota.status === "CANCELAMENTO_EM_ANDAMENTO") && (() => {
+
+        const cancelada = nota.status === "CANCELADA";
+
+        const indeterminado =
+          nota.status === "CANCELAMENTO_INDETERMINADO" ||
+          nota.status === "CANCELAMENTO_EM_ANDAMENTO";
+
+        const rejeitado = !cancelada && !indeterminado;
+
+        const corFundo = cancelada
+          ? "#fee2e2"
+          : "#fff7ed";
+
+        const corTexto = cancelada
+          ? "#991b1b"
+          : "#9a3412";
+
+        const corBorda = cancelada
+          ? "#ef4444"
+          : "#f59e0b";
+
+        return (
+          <section
+            className="card detalhe-sefaz"
+            style={{
+              marginTop: 16,
+              backgroundColor: corFundo,
+              color: corTexto,
+              borderLeft: `4px solid ${corBorda}`
+            }}
+          >
+            <div
+              className="detalhe-sefaz-icone"
+              style={{ color: corTexto }}
+            >
+              <i
+                className={`bi ${
+                  cancelada
+                    ? "bi-check-circle"
+                    : indeterminado
+                      ? "bi-exclamation-triangle"
+                      : "bi-info-circle"
+                }`}
+              />
+            </div>
+
+            <div>
+              <span>
+                {cancelada
+                  ? "CANCELAMENTO CONFIRMADO PELA SEFAZ"
+                  : indeterminado
+                    ? "CANCELAMENTO PENDENTE DE VERIFICAÇÃO"
+                    : "TENTATIVA DE CANCELAMENTO REJEITADA"}
+              </span>
+
+              <strong>
+                {nota.cStatCancelamento ?? "-"} -{" "}
+                {nota.motivoCancelamento ||
+                  "Situação do cancelamento não confirmada"}
+              </strong>
+
+              {rejeitado && (
+                <div style={{ marginTop: 8 }}>
+                  A NFC-e permanece autorizada.
+                  O cancelamento não foi realizado.
+                </div>
+              )}
+
+              {indeterminado && (
+                <div style={{ marginTop: 8 }}>
+                  Não foi possível confirmar o resultado do cancelamento.
+                  Consulte a situação do evento antes de tentar novamente.
+                </div>
+              )}
+
+              {nota.protocoloCancelamento && (
+                <div style={{ marginTop: 8 }}>
+                  Protocolo do cancelamento:{" "}
+                  <strong>{nota.protocoloCancelamento}</strong>
+                </div>
+              )}
+
+              {nota.canceladoEm && (
+                <div style={{ marginTop: 4 }}>
+                  Cancelada em: {formatarData(nota.canceladoEm)}
+                </div>
+              )}
+            </div>
+          </section>
+        );
+      })()}
 
       <section className="detalhe-acoes">
         <button
           type="button"
           className="detalhe-btn-secundario"
           onClick={handleBaixarXml}
-          disabled={nota.status !== "AUTORIZADA"}
+          disabled={!(["AUTORIZADA", "CANCELADA"].includes(nota.status))}
           title={
             nota.status === "AUTORIZADA"
               ? "Baixar XML autorizado"

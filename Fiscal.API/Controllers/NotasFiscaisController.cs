@@ -80,7 +80,7 @@ public class NotasFiscaisController : ControllerBase
             .Where(x =>
                 x.Id == id &&
                 x.EmpresaId == empresaId)
-            .Select(x => new NotaFiscalDetalhesDto
+            .Select(x => new
             {
                 Id = x.Id,
                 Modelo = x.Modelo,
@@ -97,7 +97,11 @@ public class NotasFiscaisController : ControllerBase
                 ValorTotal = x.ValorTotal,
                 CriadoEm = x.CriadoEm,
                 AtualizadoEm = x.AtualizadoEm,
-                AutorizadoEm = x.AutorizadoEm
+                AutorizadoEm = x.AutorizadoEm,
+                CStatCancelamento = x.CStatCancelamento,
+                MotivoCancelamento = x.MotivoCancelamento,
+                ProtocoloCancelamento = x.ProtocoloCancelamento,
+                CanceladoEm = x.CanceladoEm
             })
             .FirstOrDefaultAsync();
 

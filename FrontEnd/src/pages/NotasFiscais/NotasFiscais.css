@@ -523,3 +523,21 @@
     color: #eeff00;
     font-weight: 700;
 }
+
+.notas-select {
+  border: 1px solid #d4e2ef;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #17365d;
+  transition: border-color 0.2s ease;
+}
+
+.notas-select:focus {
+  border-color: #8bbde8;
+  box-shadow: 0 0 0 2px rgba(72, 169, 230, 0.10);
+  outline: none;
+}
+
+.notas-select:hover {
+  border-color: #a8cce8;
+}

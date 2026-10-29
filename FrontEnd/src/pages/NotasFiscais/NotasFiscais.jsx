@@ -306,23 +306,21 @@ export default function NotasFiscais() {
           <select
             className="form-select notas-select"
             value={status}
-            onChange={(e) =>
-              setStatus(e.target.value)
-            }
+            onChange={(e) => setStatus(e.target.value)}
           >
-            <option value="TODOS">
-              Todos os status
-            </option>
-            <option value="AUTORIZADA">
-              Autorizadas
-            </option>
-            <option value="REJEITADA">
-              Rejeitadas
-            </option>
+            <option value="TODOS">Todos os status</option>
+            <option value="AUTORIZADA">Autorizadas</option>
+            <option value="REJEITADA">Rejeitadas</option>
             <option value="CANCELADA">Canceladas</option>
-            <option value="CANCELAMENTO_INDETERMINADO">Cancelamento indeterminado</option>
-            <option value="A_ENVIAR">
-              A Enviar
+            <option value="DENEGADA">Denegadas</option>
+            <option value="INUTILIZADA">Inutilizadas</option>
+            <option value="EM_PROCESSAMENTO">Em processamento</option>
+            <option value="A_ENVIAR">A Enviar</option>
+            <option value="CANCELAMENTO_EM_ANDAMENTO">
+              Cancelamento em andamento
+            </option>
+            <option value="CANCELAMENTO_INDETERMINADO">
+              Cancelamento indeterminado
             </option>
           </select>
         </div>
@@ -425,9 +423,11 @@ export default function NotasFiscais() {
                         )}
                       </td>
 
-                      <td>
-                        {nota.cStat ?? "-"}
-                      </td>
+                        <td>
+                          {nota.status === "CANCELADA"
+                            ? (nota.cStatCancelamento ?? nota.cStat ?? "-")
+                            : (nota.cStat ?? "-")}
+                        </td>
 
                       <td>
                         {nota.tipoRegistro === "NOTA" ? (
@@ -448,23 +448,46 @@ export default function NotasFiscais() {
                             onClick={() => abrirCancelamento(nota)}
                             disabled={carregando || vendaEmitindoId !== null || cancelandoId !== null}
                             title="Solicitar cancelamento à SEFAZ"
-                            style={{ background: "#e06363", color: "#fff", border: 0, borderRadius: 6, padding: "8px 12px", cursor: "pointer" }}
+                            style={{
+                              background: "#f17777",
+                              color: "#fff",
+                              border: 0,
+                              borderRadius: 6,
+                              padding: "8px 12px",
+                              cursor: "pointer",
+                              transition: "background-color 0.2s ease"
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = "#f80000"}
+                            onMouseLeave={(e) => e.currentTarget.style.background = "#f59f9f"}
                           >
                             <i className="bi bi-x-circle" />
                           </button>
                         )}
                         </div>
                         ) : (
-                          <button
-                            type="button"
-                            disabled={carregando || vendaEmitindoId !== null || cancelandoId !== null}
-                            onClick={() => confirmarEmissao(nota)}
-                            title="Emitir NFC-e desta venda pendente"
-                            style={{ background: "#48a9e6", color: "white", border: 0, borderRadius: 6, padding: "8px 12px", opacity: vendaEmitindoId !== null ? 0.65 : 1, cursor: vendaEmitindoId !== null ? "wait" : "pointer" }}
-                          >
-                            <i className={`bi ${vendaEmitindoId === nota.id ? "bi-arrow-repeat" : "bi-send"}`} /> {vendaEmitindoId === nota.id ? "Emitindo..." : "A Enviar"}
-                          </button>
-                        )}
+                              <button
+                                type="button"
+                                disabled={carregando || vendaEmitindoId !== null || cancelandoId !== null}
+                                onClick={() => confirmarEmissao(nota)}
+                                title="Emitir NFC-e desta venda pendente"
+                                style={{
+                                  background: "#4fb4f3",
+                                  color: "#fff",
+                                  border: 0,
+                                  borderRadius: 6,
+                                  padding: "8px 12px",
+                                  opacity: vendaEmitindoId !== null ? 0.65 : 1,
+                                  cursor: vendaEmitindoId !== null ? "wait" : "pointer",
+                                  transition: "background-color 0.2s ease"
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = "#091feb"}
+                                onMouseLeave={(e) => e.currentTarget.style.background = "#75c5f5"}
+                              >
+                                <i className={`bi ${vendaEmitindoId === nota.id ? "bi-arrow-repeat" : "bi-send"}`} />
+                                {" "}
+                                {vendaEmitindoId === nota.id ? "Emitindo..." : "A Enviar"}
+                              </button>
+                            )}
                       </td>
                     </tr>
                   ))}
@@ -526,23 +549,51 @@ function CardResumo({
   );
 }
 
+// Paleta centralizada dos status fiscais.
+// Mantemos as cores no componente para evitar conflitos com o CSS legado.
+const CORES_STATUS_FISCAL = {
+  AUTORIZADA: { fundo: "#dcfce7", texto: "#166534", borda: "#86efac", rotulo: "AUTORIZADA" },
+  REJEITADA: { fundo: "#ffedd5", texto: "#9a3412", borda: "#fdba74", rotulo: "REJEITADA" },
+  CANCELADA: { fundo: "#fee2e2", texto: "#991b1b", borda: "#fca5a5", rotulo: "CANCELADA" },
+  DENEGADA: { fundo: "#e5e7eb", texto: "#374151", borda: "#9ca3af", rotulo: "DENEGADA" },
+  INUTILIZADA: { fundo: "#e0f2fe", texto: "#075985", borda: "#7dd3fc", rotulo: "INUTILIZADA" },
+  EM_PROCESSAMENTO: { fundo: "#dbeafe", texto: "#1e40af", borda: "#93c5fd", rotulo: "EM PROCESSAMENTO" },
+  PROCESSANDO: { fundo: "#dbeafe", texto: "#1e40af", borda: "#93c5fd", rotulo: "EM PROCESSAMENTO" },
+  A_ENVIAR: { fundo: "#dbeafe", texto: "#1d4ed8", borda: "#93c5fd", rotulo: "A ENVIAR" },
+  CANCELAMENTO_EM_ANDAMENTO: { fundo: "#dbeafe", texto: "#1e40af", borda: "#93c5fd", rotulo: "CANCELAMENTO EM ANDAMENTO" },
+  CANCELAMENTO_INDETERMINADO: { fundo: "#fef3c7", texto: "#92400e", borda: "#fcd34d", rotulo: "CANCELAMENTO INDETERMINADO" },
+};
+
 function StatusBadge({ status }) {
-  const classe =
-    status === "AUTORIZADA"
-      ? "autorizada"
-      : status === "CANCELADA"
-        ? "cancelada"
-        : status === "REJEITADA"
-        ? "rejeitada"
-        : status === "A_ENVIAR"
-          ? "a-enviar"
-          : "outro";
+  const chave = String(status || "").toUpperCase();
+  const cor = CORES_STATUS_FISCAL[chave] || {
+    fundo: "#f1f5f9", texto: "#475569", borda: "#cbd5e1",
+    rotulo: chave ? chave.replaceAll("_", " ") : "SEM STATUS",
+  };
 
   return (
     <span
-      className={`notas-status ${classe}`}
+      className="notas-status"
+      title={cor.rotulo}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: cor.fundo,
+        color: cor.texto,
+        border: `1px solid ${cor.borda}`,
+        borderRadius: 999,
+        padding: "5px 10px",
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: "0.02em",
+        lineHeight: 1.4,
+        textAlign: "center",
+        whiteSpace: "normal",
+        maxWidth: "100%",
+      }}
     >
-      {status || "SEM STATUS"}
+      {cor.rotulo}
     </span>
   );
 }
