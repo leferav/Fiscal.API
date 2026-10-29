@@ -13,6 +13,7 @@ export default function NotasFiscais() {
   const [avisoCancelamento, setAvisoCancelamento] = useState("");
   const [vendaEmitindoId, setVendaEmitindoId] = useState(null);
   const [avisoEmissao, setAvisoEmissao] = useState("");
+  const [erroEmissao, setErroEmissao] = useState("");
   const [notas, setNotas] = useState([]);
   const [vendasPendentes, setVendasPendentes] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -57,6 +58,7 @@ export default function NotasFiscais() {
     emissaoEmAndamento.current = true;
     setVendaEmitindoId(venda.id);
     setAvisoEmissao("");
+    setErroEmissao("");
     setErro("");
 
     try {
@@ -70,8 +72,8 @@ export default function NotasFiscais() {
         );
       }
     } catch (error) {
-      setErro(
-        `${error.message || "Falha ao emitir venda."} ` +
+      setErroEmissao(
+        `${error?.message || "Falha ao emitir venda."} ` +
         "Verifique a situação da venda e da NFC-e antes de qualquer nova tentativa."
       );
     } finally {
@@ -225,6 +227,16 @@ export default function NotasFiscais() {
 
       {avisoEmissao && (
         <div role="status" className="alert alert-info">{avisoEmissao}</div>
+      )}
+
+      {erroEmissao && (
+        <div role="alert" className="alert alert-danger" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <div>
+            <strong><i className="bi bi-exclamation-triangle" /> Não foi possível emitir a NFC-e</strong>
+            <div style={{ marginTop: 6, whiteSpace: "pre-wrap" }}>{erroEmissao}</div>
+          </div>
+          <button type="button" className="btn-close" aria-label="Fechar mensagem de erro" onClick={() => setErroEmissao("")} />
+        </div>
       )}
 
       {/* RESUMO */}
