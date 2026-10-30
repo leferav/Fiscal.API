@@ -88,6 +88,10 @@ namespace Fiscal.API.Controllers
 
                 return Ok(resultado);
             }
+            catch (Fiscal.API.Exceptions.ValidacaoFiscalException)
+            {
+                throw;
+            }
             catch (NotSupportedException ex) when (
                 ex.Message.StartsWith("CST ICMS ", StringComparison.OrdinalIgnoreCase) &&
                 ex.Message.EndsWith(" ainda não implementado.", StringComparison.OrdinalIgnoreCase))

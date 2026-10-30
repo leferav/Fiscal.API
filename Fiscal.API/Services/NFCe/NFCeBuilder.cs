@@ -64,7 +64,7 @@ namespace Fiscal.API.Services.NFCe
 
             // Destinatário / CPF na nota
             MontarDestinatario(
-                nfce,
+                nfce,                                                                                                                       
                 destinatario,
                 configuracaoFiscal
             );

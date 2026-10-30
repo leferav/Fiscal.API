@@ -423,6 +423,68 @@ namespace Fiscal.API.Migrations
                     b.ToTable("empresas", (string)null);
                 });
 
+            modelBuilder.Entity("Fiscal.API.Models.Database.LogFiscal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("CStat")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ChaveAcesso")
+                        .HasMaxLength(44)
+                        .HasColumnType("character varying(44)");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DetalhesErro")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Evento")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<string>("Mensagem")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Nivel")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)");
+
+                    b.Property<Guid?>("NotaFiscalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long?>("Numero")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Protocolo")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int?>("Serie")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("VendaId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NotaFiscalId");
+
+                    b.HasIndex("VendaId");
+
+                    b.HasIndex("EmpresaId", "CriadoEm");
+
+                    b.ToTable("logs_fiscais", (string)null);
+                });
+
             modelBuilder.Entity("Fiscal.API.Models.Database.Ncm", b =>
                 {
                     b.Property<Guid>("Id")
@@ -883,6 +945,20 @@ namespace Fiscal.API.Migrations
                         .IsRequired();
 
                     b.Navigation("Empresa");
+                });
+
+            modelBuilder.Entity("Fiscal.API.Models.Database.LogFiscal", b =>
+                {
+                    b.HasOne("Fiscal.API.Models.Database.Empresa", null)
+                        .WithMany()
+                        .HasForeignKey("EmpresaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Fiscal.API.Models.Database.NotaFiscal", null)
+                        .WithMany()
+                        .HasForeignKey("NotaFiscalId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Fiscal.API.Models.Database.NotaFiscal", b =>

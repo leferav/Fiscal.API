@@ -13,6 +13,7 @@ public class FiscalDbContext : DbContext
     public DbSet<CertificadoDigitalArquivo> CertificadosDigitaisArquivos => Set<CertificadoDigitalArquivo>();
     public DbSet<ConfiguracaoFiscal> ConfiguracoesFiscais => Set<ConfiguracaoFiscal>();
     public DbSet<NotaFiscal> NotasFiscais => Set<NotaFiscal>();
+    public DbSet<LogFiscal> LogsFiscais => Set<LogFiscal>();
     public DbSet<Cliente> Clientes => Set<Cliente>();
     public DbSet<Venda> Vendas => Set<Venda>();
     public DbSet<VendaItem> VendasItens => Set<VendaItem>();
@@ -33,6 +34,7 @@ public class FiscalDbContext : DbContext
         ConfigurarCertificadoDigitalArquivo(modelBuilder);
         ConfigurarConfiguracaoFiscal(modelBuilder);
         ConfigurarNotaFiscal(modelBuilder);
+        ConfigurarLogFiscal(modelBuilder);
         ConfigurarCliente(modelBuilder);
         ConfigurarVenda(modelBuilder);
         ConfigurarVendaItem(modelBuilder);
@@ -235,6 +237,27 @@ public class FiscalDbContext : DbContext
         entity.HasOne(x => x.Empresa)
             .WithMany(x => x.NotasFiscais)
             .HasForeignKey(x => x.EmpresaId);
+    }
+
+    private static void ConfigurarLogFiscal(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<LogFiscal>();
+        entity.ToTable("logs_fiscais");
+        entity.HasKey(x => x.Id);
+        entity.Property(x => x.Evento).HasMaxLength(60).IsRequired();
+        entity.Property(x => x.Nivel).HasMaxLength(15).IsRequired();
+        entity.Property(x => x.Mensagem).HasColumnType("text");
+        entity.Property(x => x.DetalhesErro).HasColumnType("text");
+        entity.Property(x => x.ChaveAcesso).HasMaxLength(44);
+        entity.Property(x => x.Protocolo).HasMaxLength(30);
+        entity.Property(x => x.CriadoEm).HasColumnType("timestamp with time zone");
+        entity.HasIndex(x => new { x.EmpresaId, x.CriadoEm });
+        entity.HasIndex(x => x.NotaFiscalId);
+        entity.HasIndex(x => x.VendaId);
+        entity.HasOne<Empresa>().WithMany().HasForeignKey(x => x.EmpresaId)
+            .OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<NotaFiscal>().WithMany().HasForeignKey(x => x.NotaFiscalId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigurarCliente(ModelBuilder modelBuilder)

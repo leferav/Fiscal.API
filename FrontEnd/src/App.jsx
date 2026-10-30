@@ -25,6 +25,7 @@ import SelecionarEmpresaModal from "./components/layout/SelecionarEmpresaModal";
 import CertificadoDigital from "./pages/CertificadoDigital/CertificadoDigital";
 import AceitarConvite from "./pages/AceitarConvite/AceitarConvite";
 import Usuarios from "./pages/Usuarios/Usuarios";
+import LogsFiscais from "./pages/LogsFiscais/LogsFiscais";
 
 function App() {
   const [autenticado, setAutenticado] = useState(estaAutenticado());
@@ -34,6 +35,7 @@ function App() {
   const rotaInicial = "/dashboard";
   const acessoOperacional = !somenteConsulta;
   const master = autenticado && perfil === "Master";
+  const podeVerLogs = autenticado && (perfil === "Master" || perfil === "Administrador");
   const precisaSelecionarEmpresa = master && !empresaAtivaId;
 
   useEffect(() => {
@@ -111,6 +113,8 @@ function App() {
             <Route path="/fiscal/notas" element={<NotasFiscais />} />
 
             <Route path="/fiscal/notas/:id" element={<NotaFiscalDetalhes />} />
+
+            <Route path="/fiscal/logs" element={podeVerLogs ? <LogsFiscais /> : <Navigate to="/dashboard" replace />} />
 
             {/* CLIENTES */}
             <Route path="/cadastros/clientes" element={<Clientes />} />

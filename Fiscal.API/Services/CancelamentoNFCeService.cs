@@ -13,14 +13,17 @@ public sealed class CancelamentoNFCeService
     private readonly FiscalDbContext _db;
     private readonly ZeusConfigurationFactory _factory;
     private readonly CertificadoDigitalService _certificados;
+    private readonly ILogger<CancelamentoNFCeService> _logger;
 
     public CancelamentoNFCeService(FiscalDbContext db,
         ZeusConfigurationFactory factory,
-        CertificadoDigitalService certificados)
+        CertificadoDigitalService certificados,
+        ILogger<CancelamentoNFCeService> logger)
     {
         _db = db;
         _factory = factory;
         _certificados = certificados;
+        _logger = logger;
     }
 
     public async Task<object> CancelarAsync(Guid empresaId, Guid notaId, string? justificativa)
@@ -55,6 +58,9 @@ public sealed class CancelamentoNFCeService
                 .SetProperty(n => n.AtualizadoEm, agora));
         if (reservou != 1)
             throw new InvalidOperationException("Cancelamento já solicitado ou nota indisponível.");
+
+        await RegistrarLogSeguroAsync(empresaId, notaId, "NFCe_CANCELAMENTO_SOLICITADO", "Information",
+            "Cancelamento reservado para envio à SEFAZ.", nota.ChaveAcesso, nota.Numero, nota.Serie);
 
         // A partir daqui, falhas sem resposta conclusiva exigem verificação antes de reenviar.
         try
@@ -112,6 +118,13 @@ public sealed class CancelamentoNFCeService
                             .SetProperty(v => v.AtualizadoEm, instante));
                 await tx.CommitAsync();
 
+                await RegistrarLogSeguroAsync(empresaId, notaId,
+                    confirmado ? "NFCe_CANCELAMENTO_AUTORIZADO" :
+                    rejeitado ? "NFCe_CANCELAMENTO_REJEITADO" : "NFCe_CANCELAMENTO_INDETERMINADO",
+                    confirmado ? "Information" : "Warning",
+                    motivo, nota.ChaveAcesso, nota.Numero, nota.Serie,
+                    codigo ?? resposta.Retorno.cStat, confirmado ? protocolo : null);
+
                 return new
                 {
                     confirmado,
@@ -124,15 +137,54 @@ public sealed class CancelamentoNFCeService
             }
             finally { CryptographicOperations.ZeroMemory(certificado.Pfx); }
         }
-        catch
+        catch (Exception ex)
         {
-            await _db.NotasFiscais
-                .Where(n => n.Id == notaId && n.EmpresaId == empresaId &&
-                            n.Status == "CANCELAMENTO_EM_ANDAMENTO")
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(n => n.Status, "CANCELAMENTO_INDETERMINADO")
-                    .SetProperty(n => n.AtualizadoEm, DateTime.UtcNow));
+            await RegistrarLogSeguroAsync(empresaId, notaId, "NFCe_CANCELAMENTO_ERRO", "Error",
+                "Falha no processamento do cancelamento; verificar situação na SEFAZ antes de reenviar.",
+                nota.ChaveAcesso, nota.Numero, nota.Serie, detalhes: ex.ToString());
+            try
+            {
+                await _db.NotasFiscais
+                    .Where(n => n.Id == notaId && n.EmpresaId == empresaId &&
+                                n.Status == "CANCELAMENTO_EM_ANDAMENTO")
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(n => n.Status, "CANCELAMENTO_INDETERMINADO")
+                        .SetProperty(n => n.AtualizadoEm, DateTime.UtcNow));
+            }
+            catch (Exception atualizacaoEx)
+            {
+                _logger.LogError(atualizacaoEx,
+                    "Falha ao marcar cancelamento indeterminado para NotaFiscalId {NotaFiscalId}", notaId);
+            }
             throw;
         }
     }
+
+    // Registro isolado: falha de auditoria não muda o resultado fiscal.
+    private async Task RegistrarLogSeguroAsync(Guid empresaId, Guid notaId, string evento,
+        string nivel, string? mensagem, string? chave, long numero, int serie,
+        int? cStat = null, string? protocolo = null, string? detalhes = null)
+    {
+        try
+        {
+            var id = Guid.NewGuid();
+            var criadoEm = DateTime.UtcNow;
+            await _db.Database.ExecuteSqlInterpolatedAsync($@"
+                                                            INSERT INTO logs_fiscais
+                                                            (""Id"", ""EmpresaId"", ""NotaFiscalId"", ""Evento"", ""Nivel"",
+                                                             ""Mensagem"", ""DetalhesErro"", ""ChaveAcesso"", ""Numero"", ""Serie"",
+                                                             ""CStat"", ""Protocolo"", ""CriadoEm"")
+                                                            VALUES
+                                                            ({id}, {empresaId}, {notaId}, {evento}, {nivel},
+                                                             {mensagem}, {detalhes}, {chave}, {numero}, {serie},
+                                                             {cStat}, {protocolo}, {criadoEm})");
+        }
+        catch (Exception logEx)
+        {
+            _logger.LogWarning(logEx,
+                "Falha ao persistir log fiscal {Evento} para EmpresaId {EmpresaId}, NotaFiscalId {NotaFiscalId}",
+                evento, empresaId, notaId);
+        }
+    }
+
 }

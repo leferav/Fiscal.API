@@ -20,6 +20,7 @@ namespace Fiscal.API.Services
     public class FiscalService
     {
         private readonly ILogger<FiscalService> _logger;
+        private readonly HistoricoFiscalService _historicoFiscal;
         private readonly ZeusConfigurationFactory _configFactory;
         private readonly NFeBuilder _nfeBuilder;
         private readonly NFCeBuilder _nfceBuilder;
@@ -36,9 +37,11 @@ namespace Fiscal.API.Services
             FiscalDbContext context,
             CertificadoDigitalService certificadoDigitalService,
             NumeracaoFiscalService numeracaoFiscalService,
-            ILogger<FiscalService> logger)
+            ILogger<FiscalService> logger,
+            HistoricoFiscalService historicoFiscal)
         {
             _logger = logger;
+            _historicoFiscal = historicoFiscal;
             _configFactory = configFactory;
             _nfeBuilder = nfeBuilder;
             _nfeXmlService = nfeXmlService;
@@ -225,7 +228,7 @@ namespace Fiscal.API.Services
             }
 
 
-            var empresa = await _context.Empresas
+            var empresa = await _context.Empresas                                
                 .Include(x => x.ConfiguracaoFiscal)
                 .Include(x => x.ConfiguracoesTributarias)
                 .FirstOrDefaultAsync(x => x.Id == request.EmpresaId);
@@ -453,6 +456,15 @@ namespace Fiscal.API.Services
                     await transacao.CommitAsync();
                 }
 
+                await _historicoFiscal.RegistrarAsync(new LogFiscal
+                {
+                    EmpresaId = empresa.Id, NotaFiscalId = tentativa!.Id, VendaId = vendaId,
+                    Evento = "NFCe_PREPARADA", Nivel = "Information",
+                    Mensagem = "NFC-e preparada e persistida; transmissão será iniciada.",
+                    Numero = tentativa.Numero, Serie = tentativa.Serie,
+                    ChaveAcesso = tentativa.ChaveAcesso
+                });
+
                 // Após o commit, falhas de rede são INDETERMINADAS.
                 // A tentativa persiste para consulta pela chave, sem novo número.
                 using var servicoNFe = new ServicosNFe(configuracao);
@@ -466,6 +478,15 @@ namespace Fiscal.API.Services
                 }
                 catch (Exception ex)
                 {
+                    await _historicoFiscal.RegistrarAsync(new LogFiscal
+                    {
+                        EmpresaId = empresa.Id, NotaFiscalId = tentativa!.Id, VendaId = vendaId,
+                        Evento = "NFCe_FALHA_COMUNICACAO", Nivel = "Error",
+                        Mensagem = "Transmissão falhou; resultado da SEFAZ indeterminado. Consultar antes de reenviar.",
+                        DetalhesErro = ex.ToString(),
+                        Numero = tentativa.Numero, Serie = tentativa.Serie,
+                        ChaveAcesso = tentativa.ChaveAcesso
+                    });
                     _logger.LogError(ex,
                         "Falha ao transmitir NFC-e. EmpresaId={EmpresaId} NotaFiscalId={NotaFiscalId} VendaId={VendaId} Numero={Numero} Serie={Serie} Chave={Chave}. Resultado SEFAZ indeterminado; consultar antes de reenviar.",
                         empresa.Id, tentativa!.Id, vendaId, tentativa.Numero, tentativa.Serie, tentativa.ChaveAcesso);
@@ -493,10 +514,20 @@ namespace Fiscal.API.Services
                     protocolo?.infProt != null &&
                     !string.IsNullOrWhiteSpace(protocolo.infProt.nProt);
 
-                _logger.Log(autorizada ? LogLevel.Information : LogLevel.Warning,
-                    "Retorno SEFAZ NFC-e. EmpresaId={EmpresaId} NotaFiscalId={NotaFiscalId} VendaId={VendaId} Numero={Numero} Serie={Serie} Chave={Chave} CStat={CStat} Motivo={Motivo} Protocolo={Protocolo} Autorizada={Autorizada}",
+                _logger.LogInformation("Retorno SEFAZ NFC-e. EmpresaId={EmpresaId} NotaFiscalId={NotaFiscalId} VendaId={VendaId} Numero={Numero} Serie={Serie} Chave={Chave} CStat={CStat} Motivo={Motivo} Protocolo={Protocolo} Autorizada={Autorizada}",
                     empresa.Id, tentativa!.Id, vendaId, tentativa.Numero, tentativa.Serie, tentativa.ChaveAcesso,
                     codigoRetorno, protocolo?.infProt?.xMotivo ?? retEnviNFe.xMotivo, protocolo?.infProt?.nProt, autorizada);
+
+                await _historicoFiscal.RegistrarAsync(new LogFiscal
+                {
+                    EmpresaId = empresa.Id, NotaFiscalId = tentativa!.Id, VendaId = vendaId,
+                    Evento = autorizada ? "NFCe_AUTORIZADA" : "NFCe_RETORNO_SEFAZ",
+                    Nivel = autorizada ? "Information" : "Warning",
+                    Mensagem = protocolo?.infProt?.xMotivo ?? retEnviNFe.xMotivo,
+                    Numero = tentativa.Numero, Serie = tentativa.Serie,
+                    ChaveAcesso = tentativa.ChaveAcesso, CStat = codigoRetorno,
+                    Protocolo = protocolo?.infProt?.nProt
+                });
 
                 // Rejeições explícitas.
                 // 704: Duplicidade de NFC-e com diferença na chave de acesso.
@@ -558,6 +589,14 @@ namespace Fiscal.API.Services
                     numero = nfce.infNFe.ide.nNF,
                     serie = nfce.infNFe.ide.serie
                 };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Falha ao preparar ou emitir NFC-e. EmpresaId={EmpresaId}",
+                    request.EmpresaId);
+
+                throw;
             }
             finally
             {

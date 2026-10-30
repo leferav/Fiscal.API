@@ -97,6 +97,8 @@ builder.Services
 
 builder.Services.AddScoped<FiscalService>();
 
+builder.Services.AddSingleton<HistoricoFiscalService>();
+
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("SomenteMaster", policy =>
@@ -157,10 +159,8 @@ var app = builder.Build();
 // Tratamento global de exceções
 app.UseMiddleware<ExceptionMiddleware>();
 
-// ============================================================
-// PIPELINE
-// ============================================================
 
+// PIPELINE
 app.UseCors("FrontEnd");
 
 if (app.Environment.IsDevelopment())
@@ -177,7 +177,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-
+app.UseMiddleware<ExceptionMiddleware>();
 
 await UsuarioSeed.CriarAdminInicialAsync(
     app.Services,

@@ -3,7 +3,9 @@ import { obterUsuario, podeGerenciarUsuarios } from "../../services/authService"
 
 export default function Sidebar() {
   const exibirUsuarios = podeGerenciarUsuarios();
-  const somenteConsulta = obterUsuario()?.perfil === "Consulta";
+  const perfil = obterUsuario()?.perfil;
+  const somenteConsulta = perfil === "Consulta";
+  const podeVerLogs = perfil === "Master" || perfil === "Administrador";
 
   return (
     <aside className="sidebar">
@@ -34,6 +36,15 @@ export default function Sidebar() {
             <span>Vendas</span>
           </NavLink>
 
+          <NavLink
+            to="/vendas/nfce"
+            className={({ isActive }) =>
+              `sidebar-link${isActive ? " active" : ""}`
+            }
+          >
+            <i className="bi bi-receipt" />
+            <span>Emitir NFC-e</span>
+          </NavLink>
         </div>
         )}
 
@@ -49,6 +60,11 @@ export default function Sidebar() {
             <i className="bi bi-file-earmark-text" />
             <span>Notas Fiscais</span>
           </NavLink>
+          {podeVerLogs && (
+            <NavLink to="/fiscal/logs" className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
+              <i className="bi bi-activity" /><span>Monitoramento Fiscal</span>
+            </NavLink>
+          )}
         </div>
 
         <div className="sidebar-grupo">
@@ -62,16 +78,6 @@ export default function Sidebar() {
           >
             <i className="bi bi-box-seam" />
             <span>Produtos</span>
-          </NavLink>
-
-          <NavLink
-            to="/cadastros/clientes"
-            className={({ isActive }) =>
-              `sidebar-link${isActive ? " active" : ""}`
-            }
-          >
-            <i className="bi bi-person-lines-fill" />
-            <span>Clientes</span>
           </NavLink>
 
           {!somenteConsulta && (

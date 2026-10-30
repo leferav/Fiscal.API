@@ -268,7 +268,7 @@ namespace Fiscal.API.Services.NFe
 
             if (string.IsNullOrWhiteSpace(cst))
             {
-                throw new Exception(
+                throw new ValidacaoFiscalException(
                     "CRT 3: CST ICMS não informado.");
             }
 
@@ -292,7 +292,7 @@ namespace Fiscal.API.Services.NFe
                 };
             }
 
-            throw new Exception(
+            throw new ValidacaoFiscalException(
                 $"CST ICMS {cst} ainda não implementado.");
         }
 
