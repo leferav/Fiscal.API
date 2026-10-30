@@ -35,16 +35,7 @@ export default function Sidebar() {
             <i className="bi bi-cart3" />
             <span>Vendas</span>
           </NavLink>
-
-          <NavLink
-            to="/vendas/nfce"
-            className={({ isActive }) =>
-              `sidebar-link${isActive ? " active" : ""}`
-            }
-          >
-            <i className="bi bi-receipt" />
-            <span>Emitir NFC-e</span>
-          </NavLink>
+          
         </div>
         )}
 
